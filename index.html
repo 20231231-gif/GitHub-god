@@ -1,126 +1,566 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ハンバーガークリッカー</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes float-up {
+      0% { transform: translateY(0) scale(1); opacity: 1; }
+      100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
+    }
+    .animate-float-up {
+      animation: float-up 0.8s ease-out forwards;
+    }
+    @keyframes fade-in-down {
+      0% { opacity: 0; transform: translate(-50%, -20px); }
+      100% { opacity: 1; transform: translate(-50%, 0); }
+    }
+    .animate-fade-in-down {
+      animation: fade-in-down 0.3s ease-out forwards;
+    }
+    /* タッチ・スワイプによる誤作動を防止 */
+    body {
+      touch-action: none;
+      user-select: none;
+    }
+    /* 非表示用のユーティリティクラス */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
 
-// ==========================================
-// Game Constants & Data
-// ==========================================
-const BUILDINGS_DATA = [
-  { id: 'cursor', name: 'オートクリッカー', desc: '自動でクリックしてくれます', baseCost: 15, baseCps: 0.1, icon: '👆' },
-  { id: 'staff', name: 'アルバイト', desc: '時給で働く学生。そこそこ焼ける。', baseCost: 100, baseCps: 1, icon: '🧑‍🍳' },
-  { id: 'grill', name: '最新グリル', desc: '高火力の鉄板。たくさん焼ける。', baseCost: 1100, baseCps: 8, icon: '🔥' },
-  { id: 'franchise', name: 'フランチャイズ', desc: '店舗を増やして量産体制。', baseCost: 12000, baseCps: 47, icon: '🏪' },
-  { id: 'factory', name: 'バーガー工場', desc: 'ライン作業で無限に生産。', baseCost: 130000, baseCps: 260, icon: '🏭' },
-  { id: 'bank', name: 'バーガー銀行', desc: 'ハンバーガーを融資して利子を得る。', baseCost: 1400000, baseCps: 1400, icon: '🏦' },
-  { id: 'temple', name: 'バーガー神殿', desc: '神聖な力でパティを創造する。', baseCost: 20000000, baseCps: 7800, icon: '🏛️' },
-];
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="flex h-screen items-center justify-center bg-orange-50">
+    <div class="text-xl font-bold text-orange-800 animate-pulse flex flex-col items-center">
+      <svg viewBox="0 0 100 100" class="w-16 h-16 mb-4 animate-bounce" style="filter: drop-shadow(0 10px 8px rgba(0,0,0,0.2))">
+        <path d="M 20 80 Q 50 90 80 80 L 85 70 Q 50 75 15 70 Z" fill="#D49A59" />
+        <path d="M 10 65 Q 20 75 30 65 T 50 65 T 70 65 T 90 65 L 85 60 L 15 60 Z" fill="#4CAF50" />
+        <rect x="15" y="50" width="70" height="12" rx="5" fill="#5D4037" />
+        <path d="M 15 50 L 85 50 L 80 55 L 75 50 L 60 55 L 45 50 L 30 55 L 15 50" fill="#FFB300" />
+        <rect x="20" y="42" width="60" height="6" rx="3" fill="#E53935" />
+        <path d="M 15 40 Q 50 -10 85 40 Z" fill="#E8A85A" />
+        <ellipse cx="30" cy="25" rx="2" ry="3" fill="#FFF8E1" transform="rotate(20 30 25)" />
+        <ellipse cx="50" cy="15" rx="2" ry="3" fill="#FFF8E1" />
+        <ellipse cx="70" cy="22" rx="2" ry="3" fill="#FFF8E1" transform="rotate(-20 70 22)" />
+        <ellipse cx="40" cy="30" rx="2" ry="3" fill="#FFF8E1" transform="rotate(45 40 30)" />
+        <ellipse cx="60" cy="32" rx="2" ry="3" fill="#FFF8E1" transform="rotate(-45 60 32)" />
+      </svg>
+      キッチンを準備中...
+    </div>
+  </div>
 
-const PRESTIGE_THRESHOLD = 100000; // 転生に必要な累計バーガー数
+  <!-- Main App -->
+  <div id="app" class="hidden flex flex-col md:flex-row h-screen bg-orange-50 font-sans text-stone-800 overflow-hidden select-none">
+    
+    <!-- Toast Notification -->
+    <div id="toast" class="hidden fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-stone-800 text-white px-6 py-3 rounded-full shadow-lg transition-opacity animate-fade-in-down"></div>
 
-// ==========================================
-// Helper Functions
-// ==========================================
-const formatNumber = (num) => {
-  if (num >= 1e9) return (num / 1e9).toFixed(3) + 'B';
-  if (num >= 1e6) return (num / 1e6).toFixed(3) + 'M';
-  if (num >= 1000) return Math.floor(num).toLocaleString();
-  return Math.floor(num).toString();
-};
+    <!-- --- Left Column: The Big Burger --- -->
+    <div class="w-full md:w-1/2 lg:w-5/12 bg-gradient-to-b from-orange-100 to-orange-200 flex flex-col items-center p-6 border-b md:border-b-0 md:border-r border-orange-300 relative shadow-[inset_-10px_0_20px_rgba(0,0,0,0.05)] h-[40vh] md:h-full">
+      
+      <div class="absolute top-4 left-4 bg-white/70 px-3 py-1 rounded-full text-xs font-bold text-orange-800 shadow flex items-center space-x-2">
+        <div id="prestige-badge" class="hidden flex items-center text-yellow-600 mr-2" title="黄金のパティによる生産ボーナス">
+          <span class="text-lg mr-1">🌟</span> +<span id="prestige-bonus-display">0</span>%
+        </div>
+        <button id="btn-save" class="hover:text-orange-600 transition-colors">
+          💾 セーブ
+        </button>
+      </div>
 
-const calculateCost = (baseCost, count) => Math.floor(baseCost * Math.pow(1.15, count));
-const calculatePrestigeEarn = (total) => total < PRESTIGE_THRESHOLD ? 0 : Math.floor(Math.cbrt(total / 100000));
+      <div class="mt-4 md:mt-12 text-center w-full">
+        <h1 class="text-3xl md:text-5xl font-black text-orange-900 drop-shadow-sm tracking-tight mb-2">
+          <span id="display-burgers">0</span> <span class="text-xl md:text-3xl">個</span>
+        </h1>
+        <div class="bg-orange-900/10 inline-block px-4 py-1 rounded-full">
+          <p class="text-sm md:text-lg font-bold text-orange-800">
+            毎秒: <span class="text-green-700" id="display-cps">0</span>
+          </p>
+        </div>
+      </div>
 
-// ==========================================
-// SVG Assets
-// ==========================================
-const BurgerIcon = (props) => (
-  <svg viewBox="0 0 100 100" {...props} style={{ filter: 'drop-shadow(0 10px 8px rgba(0,0,0,0.2))', ...props.style }}>
-    {/* 下バンズ */}
-    <path d="M 20 80 Q 50 90 80 80 L 85 70 Q 50 75 15 70 Z" fill="#D49A59" />
-    {/* レタス */}
-    <path d="M 10 65 Q 20 75 30 65 T 50 65 T 70 65 T 90 65 L 85 60 L 15 60 Z" fill="#4CAF50" />
-    {/* パティ */}
-    <rect x="15" y="50" width="70" height="12" rx="5" fill="#5D4037" />
-    {/* チーズ */}
-    <path d="M 15 50 L 85 50 L 80 55 L 75 50 L 60 55 L 45 50 L 30 55 L 15 50" fill="#FFB300" />
-    {/* トマト */}
-    <rect x="20" y="42" width="60" height="6" rx="3" fill="#E53935" />
-    {/* 上バンズ */}
-    <path d="M 15 40 Q 50 -10 85 40 Z" fill="#E8A85A" />
-    {/* ゴマ */}
-    <ellipse cx="30" cy="25" rx="2" ry="3" fill="#FFF8E1" transform="rotate(20 30 25)" />
-    <ellipse cx="50" cy="15" rx="2" ry="3" fill="#FFF8E1" />
-    <ellipse cx="70" cy="22" rx="2" ry="3" fill="#FFF8E1" transform="rotate(-20 70 22)" />
-    <ellipse cx="40" cy="30" rx="2" ry="3" fill="#FFF8E1" transform="rotate(45 40 30)" />
-    <ellipse cx="60" cy="32" rx="2" ry="3" fill="#FFF8E1" transform="rotate(-45 60 32)" />
-  </svg>
-);
+      <div id="burger-container" class="flex-1 w-full flex items-center justify-center relative cursor-pointer">
+        <!-- Main Burger Image -->
+        <div id="burger-svg-wrap" class="w-48 h-48 md:w-80 md:h-80 transition-transform duration-75 hover:scale-105 ease-out relative z-10">
+          <svg viewBox="0 0 100 100" style="filter: drop-shadow(0 10px 8px rgba(0,0,0,0.2))">
+            <path d="M 20 80 Q 50 90 80 80 L 85 70 Q 50 75 15 70 Z" fill="#D49A59" />
+            <path d="M 10 65 Q 20 75 30 65 T 50 65 T 70 65 T 90 65 L 85 60 L 15 60 Z" fill="#4CAF50" />
+            <rect x="15" y="50" width="70" height="12" rx="5" fill="#5D4037" />
+            <path d="M 15 50 L 85 50 L 80 55 L 75 50 L 60 55 L 45 50 L 30 55 L 15 50" fill="#FFB300" />
+            <rect x="20" y="42" width="60" height="6" rx="3" fill="#E53935" />
+            <path d="M 15 40 Q 50 -10 85 40 Z" fill="#E8A85A" />
+            <ellipse cx="30" cy="25" rx="2" ry="3" fill="#FFF8E1" transform="rotate(20 30 25)" />
+            <ellipse cx="50" cy="15" rx="2" ry="3" fill="#FFF8E1" />
+            <ellipse cx="70" cy="22" rx="2" ry="3" fill="#FFF8E1" transform="rotate(-20 70 22)" />
+            <ellipse cx="40" cy="30" rx="2" ry="3" fill="#FFF8E1" transform="rotate(45 40 30)" />
+            <ellipse cx="60" cy="32" rx="2" ry="3" fill="#FFF8E1" transform="rotate(-45 60 32)" />
+          </svg>
+        </div>
+        <!-- Particles will be appended here -->
+      </div>
+    </div>
 
-const GoldenPattyIcon = (props) => (
-  <svg viewBox="0 0 100 100" {...props}>
-    <defs>
-      <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#FFF176" />
-        <stop offset="50%" stopColor="#FFC107" />
-        <stop offset="100%" stopColor="#FF8F00" />
-      </linearGradient>
-    </defs>
-    <rect x="10" y="35" width="80" height="30" rx="15" fill="url(#gold)" />
-    <path d="M 20 40 Q 50 30 80 40" stroke="#FFF9C4" strokeWidth="2" fill="none" opacity="0.6"/>
-  </svg>
-);
+    <!-- --- Right Column: Shop & Upgrades --- -->
+    <div class="w-full md:w-1/2 lg:w-7/12 flex flex-col h-[60vh] md:h-full bg-stone-50">
+      
+      <!-- Tabs -->
+      <div class="flex bg-stone-200 border-b border-stone-300 p-2 space-x-2 shrink-0">
+        <button class="tab-btn flex-1 py-3 px-4 rounded-t-lg font-bold transition-colors bg-stone-50 text-orange-800 shadow-sm" data-target="tab-shop">
+          施設購入
+        </button>
+        <button class="tab-btn flex-1 py-3 px-4 rounded-t-lg font-bold transition-colors bg-transparent text-stone-500 hover:bg-stone-300" data-target="tab-upgrades">
+          強化
+        </button>
+        <button class="tab-btn flex-1 py-3 px-4 rounded-t-lg font-bold transition-colors bg-transparent text-stone-500 hover:bg-stone-300" data-target="tab-prestige">
+          転生
+        </button>
+      </div>
 
-// ==========================================
-// Main Component
-// ==========================================
-export default function HamburgerClicker() {
-  // --- Game State ---
-  const [burgers, setBurgers] = useState(0);
-  const [totalBurgers, setTotalBurgers] = useState(0);
-  const [buildings, setBuildings] = useState(
-    BUILDINGS_DATA.reduce((acc, b) => ({ ...acc, [b.id]: 0 }), {})
-  );
-  const [clickLevel, setClickLevel] = useState(1);
-  const [autoLevel, setAutoLevel] = useState(1);
-  const [prestigePoints, setPrestigePoints] = useState(0);
+      <!-- Tab Contents -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-4">
+        
+        <!-- SHOP TAB -->
+        <div id="tab-shop" class="tab-content space-y-3 pb-8">
+          <!-- Dynamically populated by JS -->
+        </div>
 
-  // --- UI & System State ---
-  const [activeTab, setActiveTab] = useState('shop'); // 'shop' | 'upgrades' | 'prestige'
-  const [particles, setParticles] = useState([]);
-  const [user, setUser] = useState(null);
-  const [toastMessage, setToastMessage] = useState("");
-  const [isLoadingSave, setIsLoadingSave] = useState(true);
+        <!-- UPGRADES TAB -->
+        <div id="tab-upgrades" class="tab-content hidden space-y-4">
+          <!-- Click Upgrade -->
+          <div class="bg-white p-6 rounded-xl border-2 border-orange-200 shadow-sm flex items-center justify-between">
+            <div>
+              <h3 class="font-bold text-xl flex items-center">
+                <span class="text-2xl mr-2">🖱️</span> マウスクリック強化
+              </h3>
+              <p class="text-sm text-stone-500 mt-1">クリック時の生産量が増加します。</p>
+              <p class="text-sm font-bold text-stone-700 mt-2">現在のレベル: <span id="click-level-display">1</span></p>
+              <p class="text-sm font-bold text-green-600">
+                パワー: 1クリックあたり <span id="click-power-display">1</span> 個
+              </p>
+            </div>
+            <button id="btn-buy-click" class="px-6 py-4 rounded-lg font-bold text-lg transition-transform active:scale-95 shadow bg-stone-300 text-stone-500 cursor-not-allowed">
+              強化 (-<span id="click-cost-display">50</span>)
+            </button>
+          </div>
 
-  // Ref for accessing current state inside setInterval
-  const stateRef = useRef({ burgers, totalBurgers, buildings, clickLevel, autoLevel, prestigePoints });
-  useEffect(() => {
-    stateRef.current = { burgers, totalBurgers, buildings, clickLevel, autoLevel, prestigePoints };
-  }, [burgers, totalBurgers, buildings, clickLevel, autoLevel, prestigePoints]);
+          <!-- Auto Upgrade -->
+          <div class="bg-white p-6 rounded-xl border-2 border-orange-200 shadow-sm flex items-center justify-between">
+            <div>
+              <h3 class="font-bold text-xl flex items-center">
+                <span class="text-2xl mr-2">⚙️</span> オート生産強化
+              </h3>
+              <p class="text-sm text-stone-500 mt-1">施設の自動生産力（CPS）全体が増加します。</p>
+              <p class="text-sm font-bold text-stone-700 mt-2">現在のレベル: <span id="auto-level-display">1</span></p>
+              <p class="text-sm font-bold text-green-600">
+                ボーナス: 全CPS +<span id="auto-bonus-display">0</span>%
+              </p>
+            </div>
+            <button id="btn-buy-auto" class="px-6 py-4 rounded-lg font-bold text-lg transition-transform active:scale-95 shadow bg-stone-300 text-stone-500 cursor-not-allowed">
+              強化 (-<span id="auto-cost-display">500</span>)
+            </button>
+          </div>
+        </div>
 
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(""), 3000);
-  };
+        <!-- PRESTIGE TAB -->
+        <div id="tab-prestige" class="tab-content hidden space-y-6 max-w-lg mx-auto py-8">
+          <div class="text-center space-y-4">
+            <svg viewBox="0 0 100 100" class="w-32 h-32 mx-auto drop-shadow-xl">
+              <defs>
+                <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#FFF176" />
+                  <stop offset="50%" stop-color="#FFC107" />
+                  <stop offset="100%" stop-color="#FF8F00" />
+                </linearGradient>
+              </defs>
+              <rect x="10" y="35" width="80" height="30" rx="15" fill="url(#gold)" />
+              <path d="M 20 40 Q 50 30 80 40" stroke="#FFF9C4" stroke-width="2" fill="none" opacity="0.6"/>
+            </svg>
+            <h2 class="text-3xl font-black text-yellow-600">転生 (Prestige)</h2>
+            <p class="text-stone-600">
+              今まで築き上げたハンバーガー帝国をリセットし、<br/>
+              強力なアーティファクト<strong>「黄金のパティ」</strong>を手に入れます。<br/>
+              黄金のパティ1枚につき、全体の生産量が <strong>+10%</strong> 増加します。
+            </p>
+          </div>
 
-  // --- Firebase Init & Load ---
-  useEffect(() => {
-    const initApp = async () => {
+          <div class="bg-white p-6 rounded-xl shadow-inner border border-stone-200">
+            <div class="flex justify-between mb-2">
+              <span class="text-stone-500 font-bold">現在の黄金のパティ:</span>
+              <span class="font-black text-yellow-600"><span id="prestige-current-points">0</span> 枚</span>
+            </div>
+            <div class="flex justify-between mb-2">
+              <span class="text-stone-500 font-bold">現在の生産ボーナス:</span>
+              <span class="font-black text-green-600" id="prestige-current-bonus">+0%</span>
+            </div>
+            <div class="border-t border-stone-200 my-4"></div>
+            <div class="flex justify-between mb-2">
+              <span class="text-stone-500 font-bold">累計生産数:</span>
+              <span class="font-black text-orange-800" id="prestige-total-burgers">0</span>
+            </div>
+            <div class="flex justify-between mb-4">
+              <span class="text-stone-500 font-bold">転生で獲得予定:</span>
+              <span class="font-black text-yellow-500 text-xl" id="prestige-earn">+0 枚</span>
+            </div>
+            
+            <div id="prestige-btn-container">
+              <!-- Dynamically populated by JS -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Prestige Confirmation Modal -->
+  <div id="prestige-modal" class="hidden absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl p-8 max-w-sm w-full text-center shadow-2xl animate-fade-in-down">
+      <h3 class="text-2xl font-black text-red-600 mb-4">最終確認</h3>
+      <p class="text-stone-700 mb-6 font-bold">
+        本当に転生しますか？<br/>
+        所持バーガー、施設、アップグレードは<br/><span class="text-red-500">すべて失われます！</span>
+      </p>
+      <div class="flex space-x-4">
+        <button id="btn-cancel-prestige" class="flex-1 py-3 bg-stone-200 text-stone-700 font-bold rounded-lg hover:bg-stone-300">
+          キャンセル
+        </button>
+        <button id="btn-confirm-prestige" class="flex-1 py-3 bg-yellow-500 text-white font-bold rounded-lg hover:bg-yellow-600 shadow">
+          転生する！
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script block using ES Modules for Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // ==========================================
+    // Game Constants & Data
+    // ==========================================
+    const BUILDINGS_DATA = [
+      { id: 'cursor', name: 'オートクリッカー', desc: '自動でクリックしてくれます', baseCost: 15, baseCps: 0.1, icon: '👆' },
+      { id: 'staff', name: 'アルバイト', desc: '時給で働く学生。そこそこ焼ける。', baseCost: 100, baseCps: 1, icon: '🧑‍🍳' },
+      { id: 'grill', name: '最新グリル', desc: '高火力の鉄板。たくさん焼ける。', baseCost: 1100, baseCps: 8, icon: '🔥' },
+      { id: 'franchise', name: 'フランチャイズ', desc: '店舗を増やして量産体制。', baseCost: 12000, baseCps: 47, icon: '🏪' },
+      { id: 'factory', name: 'バーガー工場', desc: 'ライン作業で無限に生産。', baseCost: 130000, baseCps: 260, icon: '🏭' },
+      { id: 'bank', name: 'バーガー銀行', desc: 'ハンバーガーを融資して利子を得る。', baseCost: 1400000, baseCps: 1400, icon: '🏦' },
+      { id: 'temple', name: 'バーガー神殿', desc: '神聖な力でパティを創造する。', baseCost: 20000000, baseCps: 7800, icon: '🏛️' },
+    ];
+    const PRESTIGE_THRESHOLD = 100000;
+
+    // ==========================================
+    // State
+    // ==========================================
+    let state = {
+      burgers: 0,
+      totalBurgers: 0,
+      buildings: BUILDINGS_DATA.reduce((acc, b) => ({ ...acc, [b.id]: 0 }), {}),
+      clickLevel: 1,
+      autoLevel: 1,
+      prestigePoints: 0,
+      lastSaveTime: 0
+    };
+
+    let currentUser = null;
+    let db = null;
+    let toastTimeout;
+
+    // Derived stats
+    let currentCps = 0;
+    let clickPower = 1;
+    let clickUpgradeCost = 50;
+    let autoUpgradeCost = 500;
+    let potentialPrestigeEarn = 0;
+    let prestigeMultiplier = 1;
+    let autoMultiplier = 1;
+
+    // ==========================================
+    // Utilities
+    // ==========================================
+    function formatNumber(num) {
+      if (num >= 1e9) return (num / 1e9).toFixed(3) + 'B';
+      if (num >= 1e6) return (num / 1e6).toFixed(3) + 'M';
+      if (num >= 1000) return Math.floor(num).toLocaleString();
+      return Math.floor(num).toString();
+    }
+
+    function calculateCost(baseCost, count) {
+      return Math.floor(baseCost * Math.pow(1.15, count));
+    }
+
+    function calculateDerivedStats() {
+      prestigeMultiplier = 1 + (state.prestigePoints * 0.1);
+      autoMultiplier = 1 + (state.autoLevel - 1) * 0.1;
+      
+      currentCps = BUILDINGS_DATA.reduce((total, b) => {
+        return total + (state.buildings[b.id] * b.baseCps);
+      }, 0) * prestigeMultiplier * autoMultiplier;
+      
+      clickPower = (1 + (state.clickLevel - 1) * 0.5) * prestigeMultiplier;
+      clickUpgradeCost = Math.floor(50 * Math.pow(2, state.clickLevel - 1));
+      autoUpgradeCost = Math.floor(500 * Math.pow(2.2, state.autoLevel - 1));
+      
+      potentialPrestigeEarn = state.totalBurgers < PRESTIGE_THRESHOLD ? 0 : Math.floor(Math.cbrt(state.totalBurgers / 100000));
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg;
+      toast.classList.remove('hidden');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3000);
+    }
+
+    // ==========================================
+    // UI Rendering
+    // ==========================================
+    function initShopUI() {
+      const shopContainer = document.getElementById('tab-shop');
+      BUILDINGS_DATA.forEach(b => {
+        const btn = document.createElement('button');
+        btn.id = `btn-buy-${b.id}`;
+        btn.className = `w-full flex items-center justify-between p-4 rounded-xl border-2 text-left transition-all duration-200 bg-stone-100 border-stone-200 opacity-60 cursor-not-allowed grayscale-[50%]`;
+        btn.innerHTML = `
+          <div class="flex items-center space-x-4">
+            <div class="text-4xl bg-orange-100 w-16 h-16 flex items-center justify-center rounded-lg shadow-inner">${b.icon}</div>
+            <div>
+              <h3 class="font-bold text-lg text-stone-800">${b.name}</h3>
+              <p class="text-xs text-stone-500">${b.desc}</p>
+              <p class="text-sm font-bold text-green-600 mt-1" id="cps-display-${b.id}"></p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-2xl font-black text-stone-200 absolute right-4 top-1/2 -translate-y-1/2 opacity-20" id="bg-count-${b.id}">0</div>
+            <div class="font-bold text-stone-400" id="cost-display-${b.id}">0</div>
+            <div class="text-xs font-bold text-stone-500 mt-1" id="count-display-${b.id}">所持: 0</div>
+          </div>
+        `;
+        // onclick event binding
+        btn.addEventListener('click', () => {
+          const cost = calculateCost(b.baseCost, state.buildings[b.id]);
+          if (state.burgers >= cost) {
+            state.burgers -= cost;
+            state.buildings[b.id]++;
+            calculateDerivedStats();
+            updateUI();
+          }
+        });
+        shopContainer.appendChild(btn);
+      });
+    }
+
+    function updateUI() {
+      // Top stats
+      document.getElementById('display-burgers').innerText = formatNumber(Math.floor(state.burgers));
+      document.getElementById('display-cps').innerText = formatNumber(currentCps);
+      
+      // Shop items
+      BUILDINGS_DATA.forEach(b => {
+        const cost = calculateCost(b.baseCost, state.buildings[b.id]);
+        const canAfford = state.burgers >= cost;
+        const btn = document.getElementById(`btn-buy-${b.id}`);
+        
+        if (canAfford) {
+          btn.className = `w-full flex items-center justify-between p-4 rounded-xl border-2 text-left transition-all duration-200 bg-white border-orange-200 hover:border-orange-400 hover:shadow-md cursor-pointer active:scale-[0.98]`;
+        } else {
+          btn.className = `w-full flex items-center justify-between p-4 rounded-xl border-2 text-left transition-all duration-200 bg-stone-100 border-stone-200 opacity-60 cursor-not-allowed grayscale-[50%]`;
+        }
+        
+        document.getElementById(`cps-display-${b.id}`).innerText = `毎秒 +${formatNumber(b.baseCps * prestigeMultiplier)}`;
+        document.getElementById(`cost-display-${b.id}`).innerText = formatNumber(cost);
+        document.getElementById(`cost-display-${b.id}`).className = `font-bold ${canAfford ? 'text-red-500' : 'text-stone-400'}`;
+        document.getElementById(`count-display-${b.id}`).innerText = `所持: ${state.buildings[b.id]}`;
+        document.getElementById(`bg-count-${b.id}`).innerText = state.buildings[b.id];
+      });
+      
+      // Upgrades
+      document.getElementById('click-level-display').innerText = state.clickLevel;
+      document.getElementById('click-power-display').innerText = formatNumber(clickPower);
+      document.getElementById('click-cost-display').innerText = formatNumber(clickUpgradeCost);
+      const btnBuyClick = document.getElementById('btn-buy-click');
+      btnBuyClick.disabled = state.burgers < clickUpgradeCost;
+      btnBuyClick.className = `px-6 py-4 rounded-lg font-bold text-lg transition-transform active:scale-95 shadow ${state.burgers >= clickUpgradeCost ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-stone-300 text-stone-500 cursor-not-allowed'}`;
+
+      document.getElementById('auto-level-display').innerText = state.autoLevel;
+      document.getElementById('auto-bonus-display').innerText = Math.floor((autoMultiplier - 1) * 100);
+      document.getElementById('auto-cost-display').innerText = formatNumber(autoUpgradeCost);
+      const btnBuyAuto = document.getElementById('btn-buy-auto');
+      btnBuyAuto.disabled = state.burgers < autoUpgradeCost;
+      btnBuyAuto.className = `px-6 py-4 rounded-lg font-bold text-lg transition-transform active:scale-95 shadow ${state.burgers >= autoUpgradeCost ? 'bg-orange-500 hover:bg-orange-600 text-white' : 'bg-stone-300 text-stone-500 cursor-not-allowed'}`;
+
+      // Prestige
+      document.getElementById('prestige-current-points').innerText = state.prestigePoints;
+      document.getElementById('prestige-current-bonus').innerText = `+${Math.floor(state.prestigePoints * 10)}%`;
+      document.getElementById('prestige-total-burgers').innerText = formatNumber(Math.floor(state.totalBurgers));
+      document.getElementById('prestige-earn').innerText = `+${potentialPrestigeEarn} 枚`;
+      
+      const prestigeBtnContainer = document.getElementById('prestige-btn-container');
+      if (potentialPrestigeEarn > 0) {
+        prestigeBtnContainer.innerHTML = `<button id="btn-prestige" class="w-full py-4 bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-white font-black rounded-lg shadow-lg transform transition active:scale-95 text-lg">帝国の再構築 (転生する)</button>`;
+        document.getElementById('btn-prestige').onclick = () => {
+          document.getElementById('prestige-modal').classList.remove('hidden');
+        };
+      } else {
+        prestigeBtnContainer.innerHTML = `<div class="text-center p-4 bg-stone-100 rounded-lg text-stone-500 text-sm font-bold border border-stone-200">転生には少なくとも ${formatNumber(PRESTIGE_THRESHOLD)} 個の累計生産が必要です。</div>`;
+      }
+      
+      const badge = document.getElementById('prestige-badge');
+      if (state.prestigePoints > 0) {
+        badge.classList.remove('hidden');
+        document.getElementById('prestige-bonus-display').innerText = Math.floor(state.prestigePoints * 10);
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    // ==========================================
+    // Interactions
+    // ==========================================
+    // Burger Click
+    const burgerContainer = document.getElementById('burger-container');
+    burgerContainer.addEventListener('pointerdown', (e) => {
+      state.burgers += clickPower;
+      state.totalBurgers += clickPower;
+
+      // Particles
+      const rect = burgerContainer.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      
+      const particle = document.createElement('div');
+      particle.className = 'absolute text-xl md:text-2xl font-black text-white drop-shadow-md pointer-events-none animate-float-up z-20';
+      particle.style.left = `${x + (Math.random() - 0.5) * 40}px`;
+      particle.style.top = `${y + (Math.random() - 0.5) * 40}px`;
+      particle.style.textShadow = '0px 2px 4px rgba(0,0,0,0.5)';
+      particle.innerText = `+${formatNumber(clickPower)}`;
+      burgerContainer.appendChild(particle);
+      
+      setTimeout(() => particle.remove(), 800);
+      
+      // Squeeze effect
+      const wrap = document.getElementById('burger-svg-wrap');
+      wrap.style.transform = 'scale(0.9)';
+      setTimeout(() => wrap.style.transform = '', 100);
+      
+      calculateDerivedStats();
+      updateUI();
+    });
+
+    // Upgrades Click
+    document.getElementById('btn-buy-click').onclick = () => {
+      if (state.burgers >= clickUpgradeCost) {
+        state.burgers -= clickUpgradeCost;
+        state.clickLevel++;
+        calculateDerivedStats();
+        updateUI();
+      }
+    };
+
+    document.getElementById('btn-buy-auto').onclick = () => {
+      if (state.burgers >= autoUpgradeCost) {
+        state.burgers -= autoUpgradeCost;
+        state.autoLevel++;
+        calculateDerivedStats();
+        updateUI();
+      }
+    };
+
+    // Prestige actions
+    document.getElementById('btn-cancel-prestige').onclick = () => {
+      document.getElementById('prestige-modal').classList.add('hidden');
+    };
+
+    document.getElementById('btn-confirm-prestige').onclick = () => {
+      if (potentialPrestigeEarn <= 0) return;
+      state.prestigePoints += potentialPrestigeEarn;
+      state.burgers = 0;
+      state.totalBurgers = 0;
+      BUILDINGS_DATA.forEach(b => state.buildings[b.id] = 0);
+      state.clickLevel = 1;
+      state.autoLevel = 1;
+      
+      // Switch back to shop tab
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById('tab-shop').classList.remove('hidden');
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.className = b.dataset.target === 'tab-shop' 
+          ? 'tab-btn flex-1 py-3 px-4 rounded-t-lg font-bold transition-colors bg-stone-50 text-orange-800 shadow-sm'
+          : 'tab-btn flex-1 py-3 px-4 rounded-t-lg font-bold transition-colors bg-transparent text-stone-500 hover:bg-stone-300';
+      });
+
+      showToast(`転生しました！ 黄金のパティを ${potentialPrestigeEarn} 枚獲得！`);
+      document.getElementById('prestige-modal').classList.add('hidden');
+      
+      calculateDerivedStats();
+      updateUI();
+      setTimeout(() => saveGame(true), 500);
+    };
+
+    // Tabs
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const targetId = e.currentTarget.dataset.target;
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        document.getElementById(targetId).classList.remove('hidden');
+        
+        document.querySelectorAll('.tab-btn').forEach(b => {
+          if (b.dataset.target === targetId) {
+            b.className = 'tab-btn flex-1 py-3 px-4 rounded-t-lg font-bold transition-colors bg-stone-50 text-orange-800 shadow-sm';
+          } else {
+            b.className = 'tab-btn flex-1 py-3 px-4 rounded-t-lg font-bold transition-colors bg-transparent text-stone-500 hover:bg-stone-300';
+          }
+        });
+      });
+    });
+
+    // Save Action
+    document.getElementById('btn-save').addEventListener('click', () => saveGame(true));
+
+    // ==========================================
+    // Firebase & App Lifecycle
+    // ==========================================
+    async function saveGame(isManual = false) {
+      if (!currentUser || !db) {
+        if (isManual) showToast("クラウド保存が無効です。");
+        return;
+      }
       try {
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-hamburger-app';
-        const firebaseConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'saveData', 'game');
+        state.lastSaveTime = Date.now();
+        await setDoc(docRef, state);
+        if (isManual) showToast("セーブしました！");
+      } catch (e) {
+        console.error("Save error", e);
+        if (isManual) showToast("セーブに失敗しました...");
+      }
+    }
 
-        if (!firebaseConfigStr) {
-          console.warn("Firebase config not found. Running in local memory mode only.");
-          setIsLoadingSave(false);
-          return;
-        }
+    async function initApp() {
+      initShopUI();
 
+      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-hamburger-app';
+      const firebaseConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
+      const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+      if (!firebaseConfigStr) {
+        console.warn("Firebase config not found. Running in local memory mode.");
+        finishLoading();
+        return;
+      }
+
+      try {
         const firebaseConfig = JSON.parse(firebaseConfigStr);
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
+        db = getFirestore(app);
 
         if (initialAuthToken) {
           await signInWithCustomToken(auth, initialAuthToken);
@@ -128,36 +568,33 @@ export default function HamburgerClicker() {
           await signInAnonymously(auth);
         }
 
-        onAuthStateChanged(auth, async (currentUser) => {
-          if (currentUser) {
-            setUser(currentUser);
-            const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'saveData', 'game');
+        onAuthStateChanged(auth, async (user) => {
+          if (user) {
+            currentUser = user;
+            const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'saveData', 'game');
             const docSnap = await getDoc(docRef);
+            
             if (docSnap.exists()) {
               const data = docSnap.data();
-              setBurgers(data.burgers || 0);
-              setTotalBurgers(data.totalBurgers || 0);
-              setBuildings(data.buildings || BUILDINGS_DATA.reduce((acc, b) => ({ ...acc, [b.id]: 0 }), {}));
-              setClickLevel(data.clickLevel || 1);
-              setAutoLevel(data.autoLevel || 1);
-              setPrestigePoints(data.prestigePoints || 0);
+              state.burgers = data.burgers || 0;
+              state.totalBurgers = data.totalBurgers || 0;
+              state.buildings = data.buildings || BUILDINGS_DATA.reduce((acc, b) => ({ ...acc, [b.id]: 0 }), {});
+              state.clickLevel = data.clickLevel || 1;
+              state.autoLevel = data.autoLevel || 1;
+              state.prestigePoints = data.prestigePoints || 0;
               
-              // Offline progression bonus (Optional)
               if (data.lastSaveTime) {
                 const secondsPassed = (Date.now() - data.lastSaveTime) / 1000;
                 if (secondsPassed > 60) {
-                   const mlt = 1 + ((data.prestigePoints || 0) * 0.1);
-                   const autoMlt = 1 + ((data.autoLevel || 1) - 1) * 0.1;
-                   let offlineCps = 0;
-                   BUILDINGS_DATA.forEach(b => {
-                      offlineCps += ((data.buildings || {})[b.id] || 0) * b.baseCps;
-                   });
-                   const offlineGain = offlineCps * mlt * autoMlt * secondsPassed;
-                   if (offlineGain > 0) {
-                     setBurgers(prev => prev + offlineGain);
-                     setTotalBurgers(prev => prev + offlineGain);
-                     showToast(`おかえりなさい！オフライン中に ${formatNumber(offlineGain)} 個生産しました。`);
-                   }
+                  calculateDerivedStats();
+                  let offlineCps = 0;
+                  BUILDINGS_DATA.forEach(b => { offlineCps += (state.buildings[b.id] || 0) * b.baseCps; });
+                  const offlineGain = offlineCps * prestigeMultiplier * autoMultiplier * secondsPassed;
+                  if (offlineGain > 0) {
+                    state.burgers += offlineGain;
+                    state.totalBurgers += offlineGain;
+                    showToast(`おかえりなさい！オフライン中に ${formatNumber(offlineGain)} 個生産しました。`);
+                  }
                 }
               } else {
                 showToast("セーブデータをロードしました");
@@ -166,429 +603,45 @@ export default function HamburgerClicker() {
               showToast("新しいゲームを始めます");
             }
           }
-          setIsLoadingSave(false);
+          finishLoading();
         });
-      } catch (error) {
-        console.error("Initialization error:", error);
-        setIsLoadingSave(false);
+      } catch (e) {
+        console.error("Initialization error:", e);
+        finishLoading();
       }
-    };
+    }
+
+    function finishLoading() {
+      document.getElementById('loading-screen').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      
+      calculateDerivedStats();
+      updateUI();
+
+      // Start Game Loop (100ms)
+      setInterval(() => {
+        if (currentCps > 0) {
+          const gain = currentCps / 10;
+          state.burgers += gain;
+          state.totalBurgers += gain;
+        }
+      }, 100);
+
+      // Start UI Render Loop
+      function renderLoop() {
+        calculateDerivedStats();
+        updateUI();
+        requestAnimationFrame(renderLoop);
+      }
+      requestAnimationFrame(renderLoop);
+
+      // Auto save every 60 seconds
+      setInterval(() => saveGame(false), 60000);
+    }
+
+    // Start
     initApp();
-  }, []);
 
-  // --- Save Function ---
-  const saveGame = useCallback(async (isManual = false) => {
-    if (!user) {
-      if (isManual) showToast("クラウド保存が無効です。");
-      return;
-    }
-    try {
-      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-hamburger-app';
-      const db = getFirestore();
-      const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'saveData', 'game');
-      await setDoc(docRef, {
-        ...stateRef.current,
-        lastSaveTime: Date.now()
-      });
-      if (isManual) showToast("セーブしました！");
-    } catch (e) {
-      console.error("Save error", e);
-      if (isManual) showToast("セーブに失敗しました...");
-    }
-  }, [user]);
-
-  // Auto-save every 60 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      saveGame(false);
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [saveGame]);
-
-  // --- Game Loop (CPS) ---
-  const prestigeMultiplier = 1 + (prestigePoints * 0.1); // 黄金パティ1枚で+10%
-  const autoMultiplier = 1 + (autoLevel - 1) * 0.1; // オート強化で+10%ずつ
-  
-  const currentCps = BUILDINGS_DATA.reduce((total, b) => {
-    return total + (buildings[b.id] * b.baseCps);
-  }, 0) * prestigeMultiplier * autoMultiplier;
-
-  useEffect(() => {
-    const tickRate = 100; // 100ms
-    const interval = setInterval(() => {
-      if (currentCps > 0) {
-        const gain = currentCps / (1000 / tickRate);
-        setBurgers(prev => prev + gain);
-        setTotalBurgers(prev => prev + gain);
-      }
-    }, tickRate);
-    return () => clearInterval(interval);
-  }, [currentCps]);
-
-  // --- Actions ---
-  const clickPower = (1 + (clickLevel - 1) * 0.5) * prestigeMultiplier;
-  const clickUpgradeCost = Math.floor(50 * Math.pow(2, clickLevel - 1));
-  const autoUpgradeCost = Math.floor(500 * Math.pow(2.2, autoLevel - 1));
-
-  const handleBurgerClick = (e) => {
-    // Increment
-    setBurgers(prev => prev + clickPower);
-    setTotalBurgers(prev => prev + clickPower);
-
-    // Particles
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    // Add multiple particles for juiciness
-    const newParticles = Array.from({length: 1}).map(() => ({
-      id: Date.now() + Math.random(),
-      x: x + (Math.random() - 0.5) * 40,
-      y: y + (Math.random() - 0.5) * 40,
-      value: `+${formatNumber(clickPower)}`
-    }));
-
-    setParticles(prev => [...prev, ...newParticles]);
-
-    // Cleanup particles
-    setTimeout(() => {
-      setParticles(prev => prev.filter(p => !newParticles.find(np => np.id === p.id)));
-    }, 800);
-  };
-
-  const buyBuilding = (id, baseCost) => {
-    const cost = calculateCost(baseCost, buildings[id]);
-    if (burgers >= cost) {
-      setBurgers(prev => prev - cost);
-      setBuildings(prev => ({ ...prev, [id]: prev[id] + 1 }));
-    }
-  };
-
-  const buyClickUpgrade = () => {
-    if (burgers >= clickUpgradeCost) {
-      setBurgers(prev => prev - clickUpgradeCost);
-      setClickLevel(prev => prev + 1);
-    }
-  };
-
-  const buyAutoUpgrade = () => {
-    if (burgers >= autoUpgradeCost) {
-      setBurgers(prev => prev - autoUpgradeCost);
-      setAutoLevel(prev => prev + 1);
-    }
-  };
-
-  const potentialPrestigeEarn = calculatePrestigeEarn(totalBurgers);
-
-  const doPrestige = () => {
-    if (potentialPrestigeEarn <= 0) return;
-    
-    // Reset all progress but keep prestige points
-    setPrestigePoints(prev => prev + potentialPrestigeEarn);
-    setBurgers(0);
-    setTotalBurgers(0);
-    setBuildings(BUILDINGS_DATA.reduce((acc, b) => ({ ...acc, [b.id]: 0 }), {}));
-    setClickLevel(1);
-    setAutoLevel(1);
-    setActiveTab('shop');
-    showToast(`転生しました！ 黄金のパティを ${potentialPrestigeEarn} 枚獲得！`);
-    // Immediately save
-    setTimeout(() => saveGame(true), 500); 
-  };
-
-  if (isLoadingSave) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-orange-50">
-        <div className="text-xl font-bold text-orange-800 animate-pulse flex flex-col items-center">
-          <BurgerIcon className="w-16 h-16 mb-4 animate-bounce" />
-          キッチンを準備中...
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col md:flex-row h-screen bg-orange-50 font-sans text-stone-800 overflow-hidden select-none">
-      
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-stone-800 text-white px-6 py-3 rounded-full shadow-lg transition-opacity animate-fade-in-down">
-          {toastMessage}
-        </div>
-      )}
-
-      {/* --- Left Column: The Big Burger --- */}
-      <div className="w-full md:w-1/2 lg:w-5/12 bg-gradient-to-b from-orange-100 to-orange-200 flex flex-col items-center p-6 border-b md:border-b-0 md:border-r border-orange-300 relative shadow-[inset_-10px_0_20px_rgba(0,0,0,0.05)] h-[40vh] md:h-full">
-        
-        <div className="absolute top-4 left-4 bg-white/70 px-3 py-1 rounded-full text-xs font-bold text-orange-800 shadow flex items-center space-x-2">
-          {prestigePoints > 0 && (
-             <div className="flex items-center text-yellow-600 mr-2" title="黄金のパティによる生産ボーナス">
-               <span className="text-lg mr-1">🌟</span> +{Math.floor(prestigePoints * 10)}%
-             </div>
-          )}
-          <button onClick={() => saveGame(true)} className="hover:text-orange-600 transition-colors">
-            💾 セーブ
-          </button>
-        </div>
-
-        <div className="mt-4 md:mt-12 text-center w-full">
-          <h1 className="text-3xl md:text-5xl font-black text-orange-900 drop-shadow-sm tracking-tight mb-2">
-            {formatNumber(Math.floor(burgers))} <span className="text-xl md:text-3xl">個</span>
-          </h1>
-          <div className="bg-orange-900/10 inline-block px-4 py-1 rounded-full">
-            <p className="text-sm md:text-lg font-bold text-orange-800">
-              毎秒: <span className="text-green-700">{formatNumber(currentCps)}</span>
-            </p>
-          </div>
-        </div>
-
-        <div className="flex-1 w-full flex items-center justify-center relative cursor-pointer"
-             onPointerDown={handleBurgerClick}>
-          {/* Main Burger Image with active effect */}
-          <div className="w-48 h-48 md:w-80 md:h-80 transition-transform duration-75 active:scale-90 hover:scale-105 ease-out relative z-10">
-            <BurgerIcon />
-          </div>
-
-          {/* Floating Particles */}
-          {particles.map(p => (
-            <div key={p.id} 
-                 className="absolute text-xl md:text-2xl font-black text-white drop-shadow-md pointer-events-none animate-float-up z-20"
-                 style={{ left: p.x, top: p.y, textShadow: '0px 2px 4px rgba(0,0,0,0.5)' }}>
-              {p.value}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* --- Right Column: Shop & Upgrades --- */}
-      <div className="w-full md:w-1/2 lg:w-7/12 flex flex-col h-[60vh] md:h-full bg-stone-50">
-        
-        {/* Tabs */}
-        <div className="flex bg-stone-200 border-b border-stone-300 p-2 space-x-2 shrink-0">
-          <button 
-            className={`flex-1 py-3 px-4 rounded-t-lg font-bold transition-colors ${activeTab === 'shop' ? 'bg-stone-50 text-orange-800 shadow-sm' : 'bg-transparent text-stone-500 hover:bg-stone-300'}`}
-            onClick={() => setActiveTab('shop')}
-          >
-            施設購入
-          </button>
-          <button 
-            className={`flex-1 py-3 px-4 rounded-t-lg font-bold transition-colors ${activeTab === 'upgrades' ? 'bg-stone-50 text-orange-800 shadow-sm' : 'bg-transparent text-stone-500 hover:bg-stone-300'}`}
-            onClick={() => setActiveTab('upgrades')}
-          >
-            強化
-          </button>
-          <button 
-            className={`flex-1 py-3 px-4 rounded-t-lg font-bold transition-colors ${activeTab === 'prestige' ? 'bg-stone-50 text-orange-800 shadow-sm' : 'bg-transparent text-stone-500 hover:bg-stone-300'}`}
-            onClick={() => setActiveTab('prestige')}
-          >
-            転生
-          </button>
-        </div>
-
-        {/* Tab Content */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          
-          {/* SHOP TAB */}
-          {activeTab === 'shop' && (
-            <div className="space-y-3 pb-8">
-              {BUILDINGS_DATA.map(b => {
-                const cost = calculateCost(b.baseCost, buildings[b.id]);
-                const canAfford = burgers >= cost;
-                return (
-                  <button
-                    key={b.id}
-                    onClick={() => buyBuilding(b.id, b.baseCost)}
-                    disabled={!canAfford}
-                    className={`w-full flex items-center justify-between p-4 rounded-xl border-2 text-left transition-all duration-200 ${
-                      canAfford 
-                        ? 'bg-white border-orange-200 hover:border-orange-400 hover:shadow-md cursor-pointer active:scale-[0.98]' 
-                        : 'bg-stone-100 border-stone-200 opacity-60 cursor-not-allowed grayscale-[50%]'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="text-4xl bg-orange-100 w-16 h-16 flex items-center justify-center rounded-lg shadow-inner">
-                        {b.icon}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-lg text-stone-800">{b.name}</h3>
-                        <p className="text-xs text-stone-500">{b.desc}</p>
-                        <p className="text-sm font-bold text-green-600 mt-1">
-                          毎秒 +{formatNumber(b.baseCps * prestigeMultiplier)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-black text-stone-200 absolute right-4 top-1/2 -translate-y-1/2 opacity-20">
-                        {buildings[b.id]}
-                      </div>
-                      <div className={`font-bold ${canAfford ? 'text-red-500' : 'text-stone-400'}`}>
-                        {formatNumber(cost)}
-                      </div>
-                      <div className="text-xs font-bold text-stone-500 mt-1">
-                        所持: {buildings[b.id]}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* UPGRADES TAB */}
-          {activeTab === 'upgrades' && (
-            <div className="space-y-4">
-              <div className="bg-white p-6 rounded-xl border-2 border-orange-200 shadow-sm flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-xl flex items-center">
-                    <span className="text-2xl mr-2">🖱️</span> マウスクリック強化
-                  </h3>
-                  <p className="text-sm text-stone-500 mt-1">クリック時の生産量が増加します。</p>
-                  <p className="text-sm font-bold text-stone-700 mt-2">現在のレベル: {clickLevel}</p>
-                  <p className="text-sm font-bold text-green-600">
-                    パワー: 1クリックあたり {formatNumber(clickPower)} 個
-                  </p>
-                </div>
-                <button
-                  onClick={buyClickUpgrade}
-                  disabled={burgers < clickUpgradeCost}
-                  className={`px-6 py-4 rounded-lg font-bold text-lg transition-transform active:scale-95 shadow ${
-                    burgers >= clickUpgradeCost 
-                      ? 'bg-orange-500 hover:bg-orange-600 text-white' 
-                      : 'bg-stone-300 text-stone-500 cursor-not-allowed'
-                  }`}
-                >
-                  強化 (-{formatNumber(clickUpgradeCost)})
-                </button>
-              </div>
-
-              <div className="bg-white p-6 rounded-xl border-2 border-orange-200 shadow-sm flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-xl flex items-center">
-                    <span className="text-2xl mr-2">⚙️</span> オート生産強化
-                  </h3>
-                  <p className="text-sm text-stone-500 mt-1">施設の自動生産力（CPS）全体が増加します。</p>
-                  <p className="text-sm font-bold text-stone-700 mt-2">現在のレベル: {autoLevel}</p>
-                  <p className="text-sm font-bold text-green-600">
-                    ボーナス: 全CPS +{Math.floor((autoMultiplier - 1) * 100)}%
-                  </p>
-                </div>
-                <button
-                  onClick={buyAutoUpgrade}
-                  disabled={burgers < autoUpgradeCost}
-                  className={`px-6 py-4 rounded-lg font-bold text-lg transition-transform active:scale-95 shadow ${
-                    burgers >= autoUpgradeCost 
-                      ? 'bg-orange-500 hover:bg-orange-600 text-white' 
-                      : 'bg-stone-300 text-stone-500 cursor-not-allowed'
-                  }`}
-                >
-                  強化 (-{formatNumber(autoUpgradeCost)})
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* PRESTIGE TAB */}
-          {activeTab === 'prestige' && (
-            <div className="space-y-6 max-w-lg mx-auto py-8">
-              <div className="text-center space-y-4">
-                <GoldenPattyIcon className="w-32 h-32 mx-auto drop-shadow-xl" />
-                <h2 className="text-3xl font-black text-yellow-600">転生 (Prestige)</h2>
-                <p className="text-stone-600">
-                  今まで築き上げたハンバーガー帝国をリセットし、<br/>
-                  強力なアーティファクト<strong>「黄金のパティ」</strong>を手に入れます。<br/>
-                  黄金のパティ1枚につき、全体の生産量が <strong>+10%</strong> 増加します。
-                </p>
-              </div>
-
-              <div className="bg-white p-6 rounded-xl shadow-inner border border-stone-200">
-                <div className="flex justify-between mb-2">
-                  <span className="text-stone-500 font-bold">現在の黄金のパティ:</span>
-                  <span className="font-black text-yellow-600">{prestigePoints} 枚</span>
-                </div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-stone-500 font-bold">現在の生産ボーナス:</span>
-                  <span className="font-black text-green-600">+{Math.floor(prestigePoints * 10)}%</span>
-                </div>
-                <div className="border-t border-stone-200 my-4"></div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-stone-500 font-bold">累計生産数:</span>
-                  <span className="font-black text-orange-800">{formatNumber(Math.floor(totalBurgers))}</span>
-                </div>
-                <div className="flex justify-between mb-4">
-                  <span className="text-stone-500 font-bold">転生で獲得予定:</span>
-                  <span className="font-black text-yellow-500 text-xl">+{potentialPrestigeEarn} 枚</span>
-                </div>
-                
-                {potentialPrestigeEarn > 0 ? (
-                  <button
-                    onClick={() => {
-                      // Custom modal replacement for confirm()
-                      const confirmed = window.confirm("本当に転生しますか？\n所持バーガーと施設、アップグレードはすべてリセットされます！\n※このメッセージはシステム環境により標準UIになります。");
-                      if(confirmed) doPrestige();
-                    }}
-                    className="w-full py-4 bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-white font-black rounded-lg shadow-lg transform transition active:scale-95 text-lg"
-                  >
-                    帝国の再構築 (転生する)
-                  </button>
-                ) : (
-                  <div className="text-center p-4 bg-stone-100 rounded-lg text-stone-500 text-sm font-bold border border-stone-200">
-                    転生には少なくとも {formatNumber(PRESTIGE_THRESHOLD)} 個の累計生産が必要です。
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-        </div>
-      </div>
-
-      {/* Global Styles for Animations */}
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes float-up {
-          0% { transform: translateY(0) scale(1); opacity: 1; }
-          100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
-        }
-        .animate-float-up {
-          animation: float-up 0.8s ease-out forwards;
-        }
-        @keyframes fade-in-down {
-          0% { opacity: 0; transform: translate(-50%, -20px); }
-          100% { opacity: 1; transform: translate(-50%, 0); }
-        }
-        .animate-fade-in-down {
-          animation: fade-in-down 0.3s ease-out forwards;
-        }
-        /* Override standard confirm dialog replacement logic (if needed, though rule says NEVER use confirm, we must build a custom modal. My bad, I will build a custom modal inline instead of window.confirm) */
-      `}} />
-      
-      {/* 
-        CRITICAL FIX: The rules strictly say "Do not use alert() and confirm() under any circumstances." 
-        Replacing the window.confirm with a custom modal.
-      */}
-      {activeTab === 'prestige_confirm' && (
-        <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-           <div className="bg-white rounded-xl p-8 max-w-sm w-full text-center shadow-2xl animate-fade-in-down">
-              <h3 className="text-2xl font-black text-red-600 mb-4">最終確認</h3>
-              <p className="text-stone-700 mb-6 font-bold">
-                本当に転生しますか？<br/>
-                所持バーガー、施設、アップグレードは<br/><span className="text-red-500">すべて失われます！</span>
-              </p>
-              <div className="flex space-x-4">
-                 <button onClick={() => setActiveTab('prestige')} className="flex-1 py-3 bg-stone-200 text-stone-700 font-bold rounded-lg hover:bg-stone-300">
-                    キャンセル
-                 </button>
-                 <button onClick={() => doPrestige()} className="flex-1 py-3 bg-yellow-500 text-white font-bold rounded-lg hover:bg-yellow-600 shadow">
-                    転生する！
-                 </button>
-              </div>
-           </div>
-        </div>
-      )}
-
-      {/* Patching the original Prestige Button logic implicitly with DOM structure change */}
-      <script dangerouslySetInnerHTML={{__html:`
-         // Overriding the previous onClick to use our new state modal
-      `}} />
-    </div>
-  );
-}
+  </script>
+</body>
+</html>
