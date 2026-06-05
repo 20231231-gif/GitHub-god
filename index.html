@@ -233,12 +233,8 @@
     </div>
   </div>
 
-  <!-- Script block using ES Modules for Firebase -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
+  <!-- Script block using LocalStorage for standalone execution -->
+  <script>
     // ==========================================
     // Game Constants & Data
     // ==========================================
@@ -266,8 +262,6 @@
       lastSaveTime: 0
     };
 
-    let currentUser = null;
-    let db = null;
     let toastTimeout;
 
     // Derived stats
@@ -524,18 +518,14 @@
     document.getElementById('btn-save').addEventListener('click', () => saveGame(true));
 
     // ==========================================
-    // Firebase & App Lifecycle
+    // LocalStorage & App Lifecycle
     // ==========================================
-    async function saveGame(isManual = false) {
-      if (!currentUser || !db) {
-        if (isManual) showToast("クラウド保存が無効です。");
-        return;
-      }
+    const SAVE_KEY = 'hamburger_clicker_save_data';
+
+    function saveGame(isManual = false) {
       try {
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-hamburger-app';
-        const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'saveData', 'game');
         state.lastSaveTime = Date.now();
-        await setDoc(docRef, state);
+        localStorage.setItem(SAVE_KEY, JSON.stringify(state));
         if (isManual) showToast("セーブしました！");
       } catch (e) {
         console.error("Save error", e);
@@ -543,72 +533,46 @@
       }
     }
 
-    async function initApp() {
+    function initApp() {
       initShopUI();
 
-      const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-hamburger-app';
-      const firebaseConfigStr = typeof __firebase_config !== 'undefined' ? __firebase_config : null;
-      const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-      if (!firebaseConfigStr) {
-        console.warn("Firebase config not found. Running in local memory mode.");
-        finishLoading();
-        return;
-      }
-
       try {
-        const firebaseConfig = JSON.parse(firebaseConfigStr);
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        db = getFirestore(app);
-
-        if (initialAuthToken) {
-          await signInWithCustomToken(auth, initialAuthToken);
-        } else {
-          await signInAnonymously(auth);
-        }
-
-        onAuthStateChanged(auth, async (user) => {
-          if (user) {
-            currentUser = user;
-            const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'saveData', 'game');
-            const docSnap = await getDoc(docRef);
-            
-            if (docSnap.exists()) {
-              const data = docSnap.data();
-              state.burgers = data.burgers || 0;
-              state.totalBurgers = data.totalBurgers || 0;
-              state.buildings = data.buildings || BUILDINGS_DATA.reduce((acc, b) => ({ ...acc, [b.id]: 0 }), {});
-              state.clickLevel = data.clickLevel || 1;
-              state.autoLevel = data.autoLevel || 1;
-              state.prestigePoints = data.prestigePoints || 0;
-              
-              if (data.lastSaveTime) {
-                const secondsPassed = (Date.now() - data.lastSaveTime) / 1000;
-                if (secondsPassed > 60) {
-                  calculateDerivedStats();
-                  let offlineCps = 0;
-                  BUILDINGS_DATA.forEach(b => { offlineCps += (state.buildings[b.id] || 0) * b.baseCps; });
-                  const offlineGain = offlineCps * prestigeMultiplier * autoMultiplier * secondsPassed;
-                  if (offlineGain > 0) {
-                    state.burgers += offlineGain;
-                    state.totalBurgers += offlineGain;
-                    showToast(`おかえりなさい！オフライン中に ${formatNumber(offlineGain)} 個生産しました。`);
-                  }
-                }
-              } else {
-                showToast("セーブデータをロードしました");
+        const savedDataStr = localStorage.getItem(SAVE_KEY);
+        
+        if (savedDataStr) {
+          const data = JSON.parse(savedDataStr);
+          state.burgers = data.burgers || 0;
+          state.totalBurgers = data.totalBurgers || 0;
+          state.buildings = data.buildings || BUILDINGS_DATA.reduce((acc, b) => ({ ...acc, [b.id]: 0 }), {});
+          state.clickLevel = data.clickLevel || 1;
+          state.autoLevel = data.autoLevel || 1;
+          state.prestigePoints = data.prestigePoints || 0;
+          
+          if (data.lastSaveTime) {
+            const secondsPassed = (Date.now() - data.lastSaveTime) / 1000;
+            if (secondsPassed > 60) {
+              calculateDerivedStats();
+              let offlineCps = 0;
+              BUILDINGS_DATA.forEach(b => { offlineCps += (state.buildings[b.id] || 0) * b.baseCps; });
+              const offlineGain = offlineCps * prestigeMultiplier * autoMultiplier * secondsPassed;
+              if (offlineGain > 0) {
+                state.burgers += offlineGain;
+                state.totalBurgers += offlineGain;
+                showToast(`おかえりなさい！オフライン中に ${formatNumber(offlineGain)} 個生産しました。`);
               }
-            } else {
-              showToast("新しいゲームを始めます");
             }
+          } else {
+            showToast("セーブデータをロードしました");
           }
-          finishLoading();
-        });
+        } else {
+          showToast("新しいゲームを始めます");
+        }
       } catch (e) {
-        console.error("Initialization error:", e);
-        finishLoading();
+        console.error("Initialization/Load error:", e);
+        showToast("セーブデータの読み込みに失敗しました");
       }
+      
+      finishLoading();
     }
 
     function finishLoading() {
