@@ -607,6 +607,9 @@
                 const mIcons = room.monsters.map(uuid => {
                     const m = Game.state.monsters.find(x => x.uuid === uuid);
                     if(!m) return '';
+                    // 侵攻中でHPが0以下の場合は表示から消す
+                    if(Game.state.isInvading && m.currentHp <= 0) return '';
+                    
                     const base = Game.MONSTER_DATA[m.type];
                     const hpPct = Math.max(0, (m.currentHp / m.maxHp) * 100);
                     const isSelected = Game.state.selectedMonsterUuid === m.uuid ? 'selected-char' : '';
@@ -749,6 +752,19 @@
         Game.selectMonster = function(uuid) {
             if (Game.state.isInvading) return;
             
+            // すでにダンジョンに配置されているかチェック
+            let isPlaced = false;
+            Game.state.dungeon.forEach(r => {
+                if (r.monsters.includes(uuid)) isPlaced = true;
+            });
+
+            if (isPlaced) {
+                // 配置済みのモンスターをタップした場合は即座に待機に戻す
+                Game.assignMonster(uuid, null);
+                Game.state.selectedMonsterUuid = null;
+                return;
+            }
+
             if (Game.state.selectedMonsterUuid === uuid) {
                 // すでに選択中のものを再度タップした場合は選択解除
                 Game.state.selectedMonsterUuid = null;
@@ -1392,11 +1408,20 @@
             }
 
             let rank = 'F';
-            if(day > 10) rank = Math.random() > 0.5 ? 'E' : 'F';
-            if(day > 25) rank = Math.random() > 0.5 ? 'D' : 'E';
-            if(day > 45) rank = Math.random() > 0.5 ? 'C' : 'D';
-            if(day > 65) rank = Math.random() > 0.5 ? 'B' : 'C';
-            if(day > 85) rank = Math.random() > 0.6 ? 'A' : 'B';
+            // 進行度に応じて出現する最低ランクを引き上げ、過去の弱いランクは出ないようにする
+            if (day <= 10) {
+                rank = 'F';
+            } else if (day <= 25) {
+                rank = Math.random() > 0.8 ? 'D' : 'E'; // 主にE、たまにD
+            } else if (day <= 45) {
+                rank = Math.random() > 0.8 ? 'C' : 'D'; // 主にD、たまにC
+            } else if (day <= 65) {
+                rank = Math.random() > 0.8 ? 'B' : 'C'; // 主にC、たまにB
+            } else if (day <= 85) {
+                rank = Math.random() > 0.8 ? 'A' : 'B'; // 主にB、たまにA
+            } else {
+                rank = Math.random() > 0.8 ? 'S' : 'A'; // 主にA、たまにS
+            }
 
             let count = 1 + Math.floor(day / 20) + Math.floor(Math.random() * 2);
             if(count > 5) count = 5;
