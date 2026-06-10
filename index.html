@@ -111,8 +111,8 @@
 
         /* マップ上の部屋カード */
         .room-card { 
-            background: #223; border: 2px dashed #445; padding: 10px; margin-bottom: 15px; border-radius: 8px; 
-            min-height: 80px; position: relative; transition: all 0.2s;
+            background: #223; border: 2px dashed #445; padding: 12px; margin-bottom: 15px; border-radius: 8px; 
+            min-height: 90px; position: relative; transition: all 0.2s;
         }
         .room-card.drag-over { border-color: #4facfe; background-color: #2a3a5a; }
         
@@ -267,7 +267,7 @@
             </div>
         </aside>
 
-        <!-- OVERLAYS (Game Over / Clear / Save) -->
+        <!-- OVERLAYS (Game Over / Clear / Save / Load) -->
         <div id="game-overlay" class="absolute inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center hidden z-50">
             <h1 id="overlay-title" class="text-6xl font-bold mb-4 text-red-500 tracking-widest">GAME OVER</h1>
             <p id="overlay-desc" class="text-xl mb-8 text-white">魔王は勇者たちに討伐された...</p>
@@ -485,7 +485,6 @@
         // 3. 初期化処理・セーブ＆ロード
         // -----------------------------------------
         Game.init = function() {
-            // ローカルストレージチェックではなく、新規初期作成
             if (Game.state.dungeon.length === 0) {
                 Game.state.dungeon.push(Game.createRoom('entrance'));
                 Game.state.dungeon.push(Game.createRoom('corridor'));
@@ -696,7 +695,7 @@
                 let trapInfo = '';
                 if(room.trap) {
                     const t = Game.TRAP_DATA[room.trap.type];
-                    trapInfo = `<div class="text-xs text-orange-400 absolute top-2 right-2 border border-orange-500 rounded px-1">罠: ${t.name} Lv${room.trap.level}</div>`;
+                    trapInfo = `<div class="text-xs text-orange-400 absolute bottom-2 right-2 border border-orange-500 rounded px-1 bg-black bg-opacity-70">罠: ${t.name} Lv${room.trap.level}</div>`;
                 }
 
                 let roomClasses = '';
@@ -706,11 +705,22 @@
                     roomClasses = 'placeable';
                 }
 
+                // 部屋の撤去可能フラグと、枠(モンスターのおける上限)テキストの算出
+                const isDestroyable = room.type !== 'entrance' && room.type !== 'boss_room' && !Game.state.isInvading;
+                const limitText = rType.maxMonsters > 0 ? `(${room.monsters.length}/${rType.maxMonsters})` : '';
+
                 mapHtml += `
                     <div class="room-card ${roomClasses} flex flex-col justify-between" data-roomid="${room.id}" onclick="Game.placeMonster('${room.id}')" id="room-card-${index}">
-                        <div class="font-bold text-blue-200 text-sm mb-1">
-                            ${index === 0 ? '🔽 ' : ''}${index === Game.state.dungeon.length-1 ? '☠️ ' : ''}
-                            階層${index}: ${rType.name}
+                        <div class="flex justify-between items-center border-b border-gray-700 pb-1 mb-1">
+                            <div class="font-bold text-blue-200 text-sm">
+                                ${index === 0 ? '🔽 ' : ''}${index === Game.state.dungeon.length-1 ? '☠️ ' : ''}
+                                階層${index}: ${rType.name}
+                            </div>
+                            <div class="flex items-center space-x-1.5 z-10">
+                                ${isDestroyable ? 
+                                    `<button class="text-[10px] text-red-400 bg-red-950 bg-opacity-80 px-1.5 py-0.5 rounded border border-red-800 hover:bg-red-900 transition-colors" onclick="event.stopPropagation(); Game.destroyRoom('${room.id}')">撤去</button>` : ''}
+                                ${limitText ? `<span class="text-xs text-gray-400 font-mono">枠:${limitText}</span>` : ''}
+                            </div>
                         </div>
                         ${trapInfo}
                         <div class="flex justify-between items-end mt-2 min-h-[50px]">
@@ -722,11 +732,8 @@
                                 ${hIcons}
                             </div>
                         </div>
-                        
-                        ${room.type !== 'entrance' && room.type !== 'boss_room' && !Game.state.isInvading ? 
-                            `<button class="absolute bottom-2 left-2 text-xs text-red-500 bg-black bg-opacity-50 px-1 rounded hover:bg-red-900" onclick="event.stopPropagation(); Game.destroyRoom('${room.id}')">撤去</button>` : ''}
                     </div>
-                    ${index < Game.state.dungeon.length -1 ? '<div class="text-center text-gray-600 my-1 text-xl">↓</div>' : ''}
+                    ${index < Game.state.dungeon.length - 1 ? '<div class="text-center text-gray-600 my-1 text-xl">↓</div>' : ''}
                 `;
 
                 if(room.type !== 'entrance' && room.type !== 'boss_room') {
@@ -774,14 +781,14 @@
                                 <div class="text-xs text-gray-300">Lv${m.level}</div>
                             </div>
                         </div>
-                        <div class="text-[10px] text-gray-300 grid grid-cols-2 gap-x-1 gap-y-0.5 mb-1 bg-black bg-opacity-30 p-1 rounded">
+                        <div class="text-[10px] text-gray-300 grid grid-cols-2 gap-x-1 gap-y-0.5 mb-1 bg-black bg-opacity-30 p-1 rounded font-mono">
                             <div>HP: ${m.currentHp}/${m.maxHp}</div>
                             <div>攻: ${m.atk}</div>
                             <div>防: ${m.def}</div>
                             <div>速: ${m.spd}</div>
                         </div>
                         <div class="w-full mb-1">
-                            <div class="flex justify-between text-[9px] text-gray-400 mb-px">
+                            <div class="flex justify-between text-[9px] text-gray-400 mb-px font-mono">
                                 <span>EXP</span><span>${m.exp} / ${m.level * 20}</span>
                             </div>
                             <div class="w-full bg-gray-700 h-1.5 rounded overflow-hidden">
@@ -1320,10 +1327,18 @@
             } else {
                 Game.log('win', '勇者たちの撃退に成功した！');
                 
-                let totalExp = Math.floor(Game.state.day * 5 * 0.9); // 経験値を元の10%減に調整
+                // 10%減の調整後の基準経験値
+                let totalExp = Math.floor(Game.state.day * 5 * 0.9);
                 Game.state.monsters.forEach(m => {
                     if(m.currentHp > 0) {
-                        m.exp += totalExp;
+                        // ダンジョンに配置されているかどうか判定
+                        let inRoom = false;
+                        Game.state.dungeon.forEach(r => { if(r.monsters.includes(m.uuid)) inRoom = true; });
+
+                        // 待機中（ベンチ）のモンスターは獲得経験値が本来の2/3に
+                        let earnedExp = inRoom ? totalExp : Math.floor(totalExp * 2 / 3);
+                        m.exp += earnedExp;
+
                         if(m.exp >= m.level * 20) {
                             m.exp -= m.level * 20;
                             m.level++;
@@ -1458,7 +1473,6 @@
                 goldGain = Math.floor(goldGain * (0.9 + Math.random() * 0.2)); 
                 Game.state.gold += goldGain;
                 
-                // 討伐時にランクに応じた研究Ptを獲得 (F:1, E:3, D:5, C:10...)
                 let rpGain = Game.HERO_RANKS[h.rank].rp || 0;
                 Game.state.rp += rpGain;
                 
@@ -1482,7 +1496,6 @@
 
             if (deadUuids.length > 0) {
                 room.monsters = room.monsters.filter(uuid => !deadUuids.includes(uuid));
-                // HPが0になったモンスターは復活せず完全にロスト(消去)
                 Game.state.monsters = Game.state.monsters.filter(m => !deadUuids.includes(m.uuid));
             }
         };
@@ -1502,7 +1515,6 @@
                 return heroes;
             }
 
-            // 日数に応じた出現勇者ランクの下限底上げ (Fクラスなどの低難易度は日数が進むと出なくなる)
             let rank = 'F';
             if (day <= 10) {
                 rank = 'F';
@@ -1533,7 +1545,6 @@
             const rData = Game.HERO_RANKS[rankStr];
             const cData = Game.HERO_CLASSES[classStr];
             
-            // 階段状に強くなるスケーリング係数 (10日ごとに一段階上昇)
             const phase = Math.floor((day - 1) / 10);
             const phaseMult = 1.0 + (phase * 0.5); 
             
@@ -1570,7 +1581,7 @@
             steps: [
                 {
                     title: "1. モンスターを掴む",
-                    text: "魔王様、最初の勇者を迎える準備をしましょう！まずは画面下の所属モンスターにいる【ゴブリン 👺】をタップして、選択（掴む）してください。",
+                    text: "魔王様、最初の勇者を迎える準備をしましょう！まずは画面下の所属モンスターにいる【ゴブリン 👺】をタップして選択（掴む）してください。※ちなみに、待機（ベンチ）のモンスターがもらえる経験値は、部屋に配置されたモンスターの【3分の2】になります！極力部屋へ配備しましょう！",
                     targetSelector: "#standby-monster-0", 
                     arrowDir: "down",
                     hideNext: true,
@@ -1587,7 +1598,7 @@
                 },
                 {
                     title: "3. 罠の設置",
-                    text: "素晴らしい！次は罠で勇者を削りましょう。右側の【建設・罠】タブの下にある『落とし穴』の【設置】ボタンを押して、罠を設置してください。",
+                    text: "素晴らしい！次は罠で勇者を削りましょう。罠を設置するには、まず右側のドロップダウンで対象の部屋（今回は『階層1: 通路』）が選択されていることを確認します（罠購入時は常に設置したい部屋を選択した状態にしておくのがコツです！）。その後、『落とし穴』の【設置】ボタンを押して設置してください！",
                     targetSelector: "#trap-install-btn-pitfall",
                     arrowDir: "right",
                     hideNext: true,
