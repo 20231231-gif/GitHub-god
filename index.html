@@ -25,23 +25,15 @@
             color: var(--text-main);
             font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
             overflow: hidden; /* 全体のスクロールを防ぎ、各パネル内でスクロールさせる */
+            margin: 0;
+            padding: 0;
         }
 
         /* カスタムスクロールバー */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: var(--bg-dark); 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: var(--bg-panel-light); 
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #2a5298; 
-        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--bg-panel-light); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #2a5298; }
 
         /* ログのテキストカラー */
         .log-sys { color: #a0a0a0; font-style: italic; }
@@ -55,183 +47,58 @@
         .log-win { color: #43e97b; font-size: 1.1em; font-weight: bold; }
         .log-lose { color: #ff0844; font-size: 1.1em; font-weight: bold; }
 
-        /* 新しいレイアウト構造 */
+        /* グリッドレイアウト（RPG風・左メイン、右タブ構造） */
         .app-grid {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: 2fr 1fr; /* 左側(マップ等)を広く取る */
+            grid-template-rows: 60px 1fr;
+            grid-template-areas:
+                "header header"
+                "main sidebar";
             height: 100vh;
-            overflow: hidden;
+            gap: 8px;
+            padding: 8px;
+            box-sizing: border-box;
         }
 
-        .app-header {
-            background-color: #111;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 20px;
-            z-index: 10;
-        }
-
-        .main-content {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
-
-        /* 左側：ダンジョンエリア */
-        .dungeon-area {
-            flex: 1;
-            background-color: #0b0c10;
-            background-image: 
-                linear-gradient(#1a1c23 1px, transparent 1px),
-                linear-gradient(90deg, #1a1c23 1px, transparent 1px);
-            background-size: 40px 40px;
-            overflow-y: auto;
-            padding: 30px;
-            position: relative;
-        }
-
-        /* 右側：コントロールパネル */
-        .control-panel {
-            width: 400px;
-            min-width: 300px;
-            background-color: var(--bg-panel);
-            border-left: 2px solid #2a2a4a;
-            display: flex;
-            flex-direction: column;
-            box-shadow: -4px 0 15px rgba(0,0,0,0.5);
-        }
-
-        /* レスポンシブ対応（モバイル・タブレット時） */
+        /* レスポンシブ対応 */
         @media (max-width: 1024px) {
-            .main-content {
-                flex-direction: column;
+            .app-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto auto;
+                grid-template-areas:
+                    "header"
+                    "main"
+                    "sidebar";
+                height: auto;
+                overflow-y: auto;
             }
-            .control-panel {
-                width: 100%;
-                height: 50vh;
-                border-left: none;
-                border-top: 2px solid #2a2a4a;
-            }
-            .dungeon-area {
-                height: 50vh;
-            }
+            body { overflow: auto; }
+            .panel { min-height: 400px; }
         }
 
-        /* RPG風マップのスタイル */
-        .map-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-bottom: 50px;
-        }
-        
-        .rpg-room {
-            width: 90%;
-            max-width: 600px;
-            background: rgba(31, 35, 43, 0.95);
-            border: 2px solid #4a5568;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.6);
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            transition: all 0.3s ease;
-        }
-        
-        .rpg-room.active-room {
-            border-color: #facc15;
-            box-shadow: 0 0 20px rgba(250, 204, 21, 0.4);
-            transform: scale(1.02);
-            z-index: 5;
-        }
-        
-        .room-path {
-            width: 12px;
-            height: 30px;
-            background: linear-gradient(to bottom, #4a5568, #2d3748);
-            border-left: 2px solid #1a202c;
-            border-right: 2px solid #1a202c;
-            margin: 0 auto;
-        }
-
-        .entity-area {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            min-height: 60px;
-            margin-top: 10px;
-        }
-
-        .character-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-            background: #2d3748;
-            border: 2px solid #718096;
-            position: relative;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            transition: transform 0.2s;
-        }
-        .character-icon:hover { transform: scale(1.1); }
-        .character-icon.monster { background: #4a1c1c; border-color: #9b2c2c; }
-        .character-icon.hero { background: #1c3d5a; border-color: #2b6cb0; }
-
-        .hp-bar-mini {
-            position: absolute;
-            bottom: -6px;
-            left: -2px;
-            width: calc(100% + 4px);
-            height: 6px;
-            background: #1a202c;
-            border-radius: 3px;
-            border: 1px solid #000;
-            overflow: hidden;
-        }
-
-        .tabs-header {
-            display: flex;
-            background-color: #0f172a;
-            border-bottom: 2px solid var(--accent-red);
-        }
-        .tab-btn {
-            flex: 1;
-            padding: 12px 5px;
-            text-align: center;
-            cursor: pointer;
-            font-size: 0.9rem;
-            color: var(--text-muted);
-            border-bottom: 3px solid transparent;
-            transition: all 0.2s;
-            font-weight: bold;
-        }
-        .tab-btn:hover { background-color: rgba(255,255,255,0.05); color: white; }
-        .tab-btn.active {
-            color: white;
+        .panel {
             background-color: var(--bg-panel);
-            border-bottom-color: var(--accent-red);
+            border: 1px solid #2a2a4a;
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* パネル内のはみ出しを制御 */
         }
-        
-        .tab-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-        }
+
+        .area-header { grid-area: header; background-color: #111; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; border-radius: 8px; }
+        .area-main { grid-area: main; position: relative; } /* マップとモンスター一覧を含む */
+        .area-sidebar { grid-area: sidebar; } /* タブメニューを含む */
+
+        /* マップとモンスターエリアの分割 (main内) */
+        .main-content { display: flex; flex-direction: column; height: 100%; gap: 8px; }
+        .map-section { flex: 2; border: 1px solid #334; border-radius: 4px; overflow-y: auto; padding: 10px; background-color: #1a1a2e; }
+        .monster-roster-section { flex: 1; border: 1px solid #334; border-radius: 4px; overflow-y: auto; padding: 10px; background-color: #16213e; min-height: 150px; }
 
         .btn {
-            background-color: var(--bg-panel-light);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 0.25rem;
-            transition: all 0.2s;
-            cursor: pointer;
-            border: 1px solid #3a5a8a;
-            font-size: 0.9rem;
+            background-color: var(--bg-panel-light); color: white; padding: 0.5rem 1rem; border-radius: 0.25rem;
+            transition: all 0.2s; cursor: pointer; border: 1px solid #3a5a8a; font-size: 0.9rem;
         }
         .btn:hover:not(:disabled) { background-color: #2a5298; transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .btn:active:not(:disabled) { transform: translateY(0); }
@@ -240,263 +107,295 @@
         .btn-action { background-color: var(--accent-red); border-color: #b02a40; font-weight: bold; }
         .btn-action:hover:not(:disabled) { background-color: #ff4d6d; }
 
-        .facility-card { background: #1a1a2e; border: 1px solid #334; padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;}
-        .monster-card { background: #2a2a4a; padding: 10px; border-radius: 6px; border: 1px solid #446; margin-bottom: 8px;}
+        .tab-btn { padding: 0.5rem 1rem; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text-muted); flex: 1; text-align: center; font-size: 0.9rem; }
+        .tab-btn.active { border-bottom: 2px solid var(--accent-red); color: white; font-weight: bold; background-color: rgba(233, 69, 96, 0.1); }
+        .tabs-header { display: flex; border-bottom: 1px solid #445; margin-bottom: 10px; }
+        .tab-content { flex: 1; overflow-y: auto; display: none; }
+        .tab-content.active { display: block; } /* アクティブなタブだけ表示 */
+
+        /* マップ上の部屋カード */
+        .room-card { 
+            background: #223; border: 2px dashed #445; padding: 10px; margin-bottom: 15px; border-radius: 8px; 
+            min-height: 80px; position: relative; transition: all 0.2s;
+        }
+        .room-card.drag-over { border-color: #4facfe; background-color: #2a3a5a; }
+        
+        /* 配置されているキャラクターアイコン */
+        .char-icon {
+            display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+            width: 40px; height: 40px; border-radius: 50%; margin: 2px;
+            font-size: 1.2rem; position: relative; font-weight: bold; text-shadow: 1px 1px 2px black;
+            border: 2px solid rgba(255,255,255,0.3);
+            transition: all 0.2s;
+        }
+        .char-hero { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .char-monster { background: linear-gradient(135deg, #ff0844 0%, #ffb199 100%); cursor: pointer; }
+        .char-monster:hover { transform: scale(1.1); }
+        .hp-bar-mini { position: absolute; bottom: -5px; left: 0; width: 100%; height: 4px; background-color: #333; border-radius: 2px; overflow: hidden; }
+        .hp-bar-mini-fill { height: 100%; background-color: #43e97b; }
+        
+        /* 下部のモンスターカード */
+        .monster-card { 
+            background: #2a2a4a; padding: 8px; border-radius: 4px; text-align: center; border: 1px solid #446;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .monster-card:hover { border-color: #f6d365; transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        
+        /* 選択中のキャラクター・カード */
+        .selected-char {
+            outline: 3px solid #f6d365;
+            outline-offset: 2px;
+            box-shadow: 0 0 15px #f6d365;
+            z-index: 10;
+        }
+        
+        /* 配置可能な部屋のハイライト */
+        .room-card.placeable { cursor: pointer; }
+        .room-card.placeable:hover { border-color: #f6d365; background-color: rgba(246, 211, 101, 0.1); }
+        
+        .facility-card { background: #1a1a2e; border: 1px solid #334; padding: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;}
+
+        /* アニメーション用 */
+        @keyframes attackShake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+        .anim-attack { animation: attackShake 0.3s ease-in-out; }
+        
+        @keyframes damageBlink {
+            0% { opacity: 1; filter: brightness(1); }
+            50% { opacity: 0.5; filter: brightness(2) invert(1) hue-rotate(180deg); }
+            100% { opacity: 1; filter: brightness(1); }
+        }
+        .anim-damage { animation: damageBlink 0.3s ease-in-out; }
     </style>
 </head>
 <body>
-
     <div class="app-grid" id="app">
-        <!-- 上部：ヘッダー -->
-        <header class="app-header">
+        <!-- 上部：資源・操作ヘッダー -->
+        <header class="area-header shadow-lg">
             <div class="flex items-center space-x-6 text-lg">
                 <div class="font-bold text-red-500 text-xl tracking-wider mr-4">魔王軍司令室</div>
                 <div>DAY: <span id="ui-day" class="font-bold text-white">1</span> / 100</div>
-                <div>資金: <span id="ui-gold" class="font-bold text-yellow-400">100</span> G</div>
+                <div>資金: <span id="ui-gold" class="font-bold text-yellow-400">200</span> G</div>
                 <div>研究Pt: <span id="ui-rp" class="font-bold text-purple-400">0</span></div>
             </div>
-            <div class="flex space-x-2 items-center">
-                <select id="game-speed" class="bg-gray-800 text-white p-1 rounded border border-gray-600 text-sm cursor-pointer" onchange="Game.changeSpeed(this.value)">
-                    <option value="1">速度: 1x</option>
-                    <option value="2">速度: 2x</option>
-                    <option value="4">速度: 4x</option>
+            <div class="flex items-center space-x-3">
+                <div class="text-sm text-gray-300">戦闘速度:</div>
+                <select id="speed-select" class="bg-gray-800 text-white p-1 rounded border border-gray-600">
+                    <option value="1">等速 (x1)</option>
+                    <option value="2">倍速 (x2)</option>
+                    <option value="4">超速 (x4)</option>
                 </select>
-                <button class="btn ml-2" onclick="Game.saveGame()">セーブ</button>
+                <button class="btn ml-2" onclick="Game.saveGame()">手動セーブ</button>
                 <button class="btn" onclick="Game.loadGame()">ロード</button>
-                <button class="btn btn-action ml-4 px-6" onclick="Game.nextDay()" id="btn-next-day">次の日へ進む</button>
+                <button class="btn btn-action ml-4" onclick="Game.startInvasion()" id="btn-next-day">次の日へ進む (侵攻開始)</button>
             </div>
         </header>
 
-        <div class="main-content">
-            <!-- 左側：ダンジョン全貌 (メインビュー) -->
-            <div class="dungeon-area">
-                <h2 class="absolute top-4 left-4 text-2xl font-bold text-gray-500 opacity-50 pointer-events-none">DUNGEON MAP</h2>
-                <div id="dungeon-map" class="map-container">
-                    <!-- JSで動的にRPG風マップを生成 -->
-                </div>
-            </div>
-
-            <!-- 右側：コントロールパネル -->
-            <div class="control-panel">
-                <!-- タブメニュー -->
-                <div class="tabs-header">
-                    <div class="tab-btn active" onclick="Game.switchTab('build')">🛠️ 建設・罠</div>
-                    <div class="tab-btn" onclick="Game.switchTab('summon')">👹 モンスター</div>
-                    <div class="tab-btn" onclick="Game.switchTab('research')">🧪 研究</div>
-                    <div class="tab-btn" onclick="Game.switchTab('log')">📜 ログ</div>
-                </div>
-
-                <!-- 建設・罠タブ -->
-                <div id="tab-build" class="tab-content">
-                    <h3 class="font-bold text-sm mb-2 text-gray-400 border-b border-gray-700 pb-1">新規部屋の拡張 (最下層に追加)</h3>
-                    <div id="build-list" class="mb-6"></div>
-                    
-                    <h3 class="font-bold text-sm mb-2 text-gray-400 border-b border-gray-700 pb-1">罠の設置・強化 (部屋を選択)</h3>
-                    <div class="flex space-x-2 mb-3">
-                        <select id="trap-room-select" class="bg-gray-800 text-white p-2 rounded flex-1 border border-gray-600 focus:outline-none focus:border-blue-500"></select>
+        <!-- 左メイン：ダンジョン全貌と所属モンスター -->
+        <main class="panel area-main">
+            <div class="main-content">
+                <!-- 上部：ダンジョンマップ -->
+                <div class="map-section flex-1 relative" id="dungeon-map-container">
+                    <h2 class="text-lg font-bold mb-2 border-b border-gray-600 pb-1 text-blue-300 sticky top-0 bg-[#1a1a2e] z-10">ダンジョン全体図</h2>
+                    <div id="dungeon-map" class="pb-8">
+                        <!-- JSで部屋を生成 -->
                     </div>
-                    <div id="trap-list"></div>
+                    
+                    <!-- 侵攻時オーバーレイメッセージ -->
+                    <div id="invasion-status" class="absolute top-4 right-4 bg-black bg-opacity-80 text-white p-2 rounded hidden z-20 border border-red-500 shadow-red-500/50 shadow-lg font-bold">
+                        <span class="text-red-500 blink">⚔️ 勇者侵攻中...</span>
+                    </div>
                 </div>
 
-                <!-- モンスター（召喚・配置）タブ -->
-                <div id="tab-summon" class="tab-content hidden flex-col">
-                    <h3 class="font-bold text-sm mb-2 text-gray-400 border-b border-gray-700 pb-1">召喚陣 (ゴールドを消費して召喚)</h3>
-                    <div id="summon-list" class="grid grid-cols-2 gap-2 mb-6"></div>
-
-                    <h3 class="font-bold text-sm mb-2 text-gray-400 border-b border-gray-700 pb-1 flex justify-between">
-                        <span>所属モンスター一覧</span>
-                        <span class="text-xs text-blue-300 font-normal">左のマップへドラッグ＆ドロップで配置</span>
-                    </h3>
-                    <div id="monster-roster" class="flex flex-col gap-2 overflow-y-auto flex-1 pr-1">
+                <!-- 下部：待機モンスター（ドラッグ元） -->
+                <div class="monster-roster-section relative">
+                    <h2 class="text-md font-bold mb-2 text-green-300 sticky top-0 bg-[#16213e] z-10">
+                        所属モンスター <span class="text-xs text-gray-400 font-normal">(タップで選択 → 部屋をタップで配置)</span>
+                    </h2>
+                    <div id="monster-roster" class="flex flex-wrap gap-2 min-h-[100px] p-2" onclick="Game.returnToRoster()">
                         <!-- JSで生成 -->
                     </div>
                 </div>
+            </div>
+        </main>
 
-                <!-- 研究タブ -->
-                <div id="tab-research" class="tab-content hidden">
-                    <h3 class="font-bold text-sm mb-2 text-gray-400 border-b border-gray-700 pb-1">技術開発 (RPを消費)</h3>
-                    <div id="research-list" class="flex flex-col gap-2"></div>
+        <!-- 右サイドバー：タブ切替（建設/召喚/研究/ログ） -->
+        <aside class="panel area-sidebar">
+            <div class="tabs-header">
+                <div class="tab-btn active" data-target="tab-build" onclick="Game.switchTab('tab-build')">建設・罠</div>
+                <div class="tab-btn" data-target="tab-summon" onclick="Game.switchTab('tab-summon')">召喚・強化</div>
+                <div class="tab-btn" data-target="tab-research" onclick="Game.switchTab('tab-research')">研究</div>
+                <div class="tab-btn" data-target="tab-log" onclick="Game.switchTab('tab-log')">ログ</div>
+            </div>
+
+            <!-- 建設・罠タブ -->
+            <div id="tab-build" class="tab-content active">
+                <h3 class="font-bold text-sm mb-2 text-gray-300 border-b border-gray-700 pb-1">新規部屋の建設</h3>
+                <div id="build-list" class="mb-6 space-y-1"></div>
+                
+                <h3 class="font-bold text-sm mb-2 text-gray-300 border-b border-gray-700 pb-1">罠の設置・強化</h3>
+                <div class="flex space-x-2 mb-2">
+                    <select id="trap-room-select" class="bg-gray-800 text-white p-2 rounded flex-1 text-sm"></select>
                 </div>
+                <div id="trap-list" class="space-y-1"></div>
+            </div>
 
-                <!-- ログタブ -->
-                <div id="tab-log" class="tab-content hidden flex-col">
-                    <h3 class="font-bold text-sm mb-2 text-yellow-500 border-b border-gray-700 pb-1">戦闘・イベントログ</h3>
-                    <div id="battle-log" class="flex-1 overflow-y-auto text-sm leading-relaxed space-y-1 font-mono bg-black bg-opacity-50 p-3 rounded border border-gray-800">
-                        <div class="log-sys">ダンジョン経営を開始しました。</div>
-                    </div>
+            <!-- 召喚・強化タブ -->
+            <div id="tab-summon" class="tab-content">
+                <h3 class="font-bold text-sm mb-2 text-gray-300 border-b border-gray-700 pb-1">モンスター召喚</h3>
+                <div id="summon-list" class="grid grid-cols-1 gap-2 mb-6"></div>
+            </div>
+
+            <!-- 研究タブ -->
+            <div id="tab-research" class="tab-content">
+                <h3 class="font-bold text-sm mb-2 text-gray-300 border-b border-gray-700 pb-1">技術開発 (RP消費)</h3>
+                <div id="research-list" class="grid grid-cols-1 gap-2"></div>
+            </div>
+
+            <!-- 戦闘ログタブ -->
+            <div id="tab-log" class="tab-content bg-black p-2 rounded border border-gray-800 font-mono text-sm leading-relaxed space-y-1">
+                <div id="battle-log">
+                    <div class="log-sys">ダンジョン経営を開始しました。</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- OVERLAYS (Game Over / Clear / Save) -->
+        <div id="game-overlay" class="absolute inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center hidden z-50">
+            <h1 id="overlay-title" class="text-6xl font-bold mb-4 text-red-500 tracking-widest">GAME OVER</h1>
+            <p id="overlay-desc" class="text-xl mb-8 text-white">魔王は勇者たちに討伐された...</p>
+            <button class="btn btn-action text-xl px-8 py-4" onclick="Game.resetGame()">最初からやり直す</button>
+        </div>
+
+        <div id="save-dialog" class="absolute inset-0 bg-black bg-opacity-80 flex items-center justify-center hidden z-50">
+            <div class="bg-gray-800 p-6 rounded-lg shadow-xl max-w-lg w-full text-center border border-gray-600">
+                <h2 class="text-xl font-bold text-yellow-400 mb-4">復元の呪文（セーブコード）</h2>
+                <p class="text-sm text-gray-300 mb-2">以下のコードを保存することでデータを復元できます。</p>
+                <textarea id="save-code-textarea" class="w-full h-32 bg-gray-900 text-white p-2 rounded border border-gray-600 font-mono text-xs mb-4 focus:outline-none" readonly></textarea>
+                <div class="flex justify-center space-x-4">
+                    <button class="btn btn-action" onclick="Game.copySaveCode()">クリップボードにコピー</button>
+                    <button id="btn-skip-save" class="btn" onclick="Game.closeSaveDialog()">セーブせずに次の日へ</button>
                 </div>
             </div>
         </div>
 
-        <!-- ゲームオーバー/クリア用オーバーレイ -->
-        <div id="game-overlay" class="absolute inset-0 bg-black bg-opacity-95 flex flex-col items-center justify-center hidden z-50">
-            <h1 id="overlay-title" class="text-7xl font-bold mb-4 text-red-600 tracking-widest drop-shadow-lg">GAME OVER</h1>
-            <p id="overlay-desc" class="text-2xl mb-8 text-gray-300">魔王は勇者たちに討伐された...</p>
-            <button class="btn btn-action text-2xl px-10 py-5 rounded-lg shadow-lg" onclick="Game.resetGame()">最初からやり直す</button>
+        <div id="load-dialog" class="absolute inset-0 bg-black bg-opacity-80 flex items-center justify-center hidden z-50">
+            <div class="bg-gray-800 p-6 rounded-lg shadow-xl max-w-lg w-full text-center border border-gray-600">
+                <h2 class="text-xl font-bold text-blue-400 mb-4">復元の呪文（ロード）</h2>
+                <p class="text-sm text-gray-300 mb-2">保存したコードを貼り付けてください。</p>
+                <textarea id="load-code-textarea" class="w-full h-32 bg-gray-900 text-white p-2 rounded border border-gray-600 font-mono text-xs mb-4 focus:outline-none" placeholder="ここにコードをペースト"></textarea>
+                <div class="flex justify-center space-x-4">
+                    <button class="btn btn-action" onclick="Game.executeLoad()">ロード実行</button>
+                    <button class="btn" onclick="Game.closeLoadDialog()">キャンセル</button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- =========================================
-         JavaScript セクション
-         ゲームロジック、データ、描画処理を完全に内包
-         ========================================= -->
     <script>
-        // 名前空間オブジェクトを使用してグローバル汚染を防ぎ整理する
+        // グローバルオブジェクト
         const Game = {};
 
-        // キャラクター表現用の絵文字マッピング
-        Game.EMOJI_MONSTER = {
-            goblin: '👺', slime: '💧', orc: '🐗', skeleton: '💀', golem: '🪨',
-            lizardman: '🦎', werewolf: '🐺', dragon: '🐉', lich: '🧙‍♀️', demon_lord: '👿'
-        };
-        Game.EMOJI_HERO = {
-            warrior: '🗡️', mage: '🪄', priest: '⛪', thief: '🥷', archer: '🏹', paladin: '🛡️'
-        };
-
         // -----------------------------------------
-        // 1. 定数データ定義 (Const Data)
+        // 1. 定数データ定義
         // -----------------------------------------
         Game.ROOM_TYPES = {
-            entrance: { name: 'ダンジョン入口', maxMonsters: 0, cost: 0, desc: '勇者が入ってくる場所' },
-            boss_room: { name: '魔王の玉座', maxMonsters: 3, cost: 0, desc: '魔王が待ち受ける最終防衛ライン' },
-            corridor: { name: '暗い回廊', maxMonsters: 2, cost: 100, desc: '標準的な通路' },
-            trap_room: { name: '罠の部屋', maxMonsters: 1, cost: 150, desc: '罠の威力が1.5倍になる' },
-            training: { name: '訓練所', maxMonsters: 3, cost: 300, desc: '配置モンスターの攻防+20%' },
-            treasury: { name: '宝物庫', maxMonsters: 2, cost: 200, desc: 'ここで倒した勇者のドロップ金1.5倍' },
-            dragon_nest: { name: '竜の巣', maxMonsters: 1, cost: 500, desc: 'ドラゴンの攻防+50%' },
-            lab: { name: '研究所', maxMonsters: 1, cost: 400, desc: '勇者が通過するたびにRP+5' },
-            summon_room: { name: '召喚陣の間', maxMonsters: 3, cost: 400, desc: 'モンスターの速度+30%、毎ターン微回復' }
+            entrance: { id: 'entrance', name: '入口', cost: 0, desc: '勇者が侵入してくる場所。', maxMonsters: 0 },
+            corridor: { id: 'corridor', name: '通路', cost: 100, desc: '普通の通路。モンスターを2体配置可能。', maxMonsters: 2 },
+            boss_room: { id: 'boss_room', name: '魔王の間', cost: 0, desc: '魔王が鎮座する。ここを突破されるとゲームオーバー。', maxMonsters: 5 },
+            trap_room: { id: 'trap_room', name: '罠部屋', cost: 200, desc: '罠の威力が1.5倍。モンスター1体。', maxMonsters: 1 },
+            treasury: { id: 'treasury', name: '宝物庫', cost: 300, desc: 'ここで倒すと獲得Gが1.5倍。モンスター2体。', maxMonsters: 2 },
+            lab: { id: 'lab', name: '研究所', cost: 400, desc: '勇者通過時研究Pt+5。モンスター1体。', maxMonsters: 1 },
+            training: { id: 'training', name: '訓練場', cost: 400, desc: '配置モンスターの攻防20%UP。モンスター3体。', maxMonsters: 3 },
+            summon_room: { id: 'summon_room', name: '召喚部屋', cost: 500, desc: '配置モンスターの素早さ30%UP。ターン終了時回復。モンスター2体。', maxMonsters: 2 },
+            dragon_nest: { id: 'dragon_nest', name: 'ドラゴンの巣', cost: 1000, desc: 'ドラゴン系の全ステータス50%UP。モンスター1体。', maxMonsters: 1 }
         };
 
         Game.TRAP_DATA = {
-            spikes: { name: 'トゲ床', type: 'damage', power: 5, cost: 50, upgradeCost: 50, maxLevel: 5, desc: '単体に固定ダメージ' },
-            arrows: { name: '毒矢', type: 'status', chance: 0.3, effect: 'poison', cost: 100, upgradeCost: 100, maxLevel: 3, desc: '全体に確率で毒付与' },
-            pitfall: { name: '落とし穴', type: 'damage', power: 10, cost: 150, upgradeCost: 100, maxLevel: 3, desc: '単体に大ダメージ' },
-            stun_gun: { name: 'スタンガン', type: 'status', chance: 0.2, effect: 'paralyze', cost: 200, upgradeCost: 150, maxLevel: 3, desc: '[要研究] 全体に確率で麻痺' },
-            bomb: { name: '爆弾', type: 'damage_all', power: 15, chance: 0.2, effect: 'burn', cost: 300, upgradeCost: 200, maxLevel: 3, desc: '[要研究] 全体に大ダメージ+確率火傷' }
+            pitfall: { id: 'pitfall', name: '落とし穴', cost: 50, type: 'damage', power: 15, upgradeCost: 30, maxLevel: 5, desc: '単体に固定ダメージ' },
+            poison_gas: { id: 'poison_gas', name: '毒ガス', cost: 100, type: 'status', effect: 'poison', chance: 0.6, upgradeCost: 50, maxLevel: 3, desc: '全体を確率で毒状態に' },
+            flamethrower: { id: 'flamethrower', name: '火炎放射', cost: 150, type: 'damage_all', power: 20, upgradeCost: 80, maxLevel: 5, desc: '全体火属性ダメージ+火傷', effect: 'burn', chance: 0.3 },
+            stun_gun: { id: 'stun_gun', name: '電撃罠', cost: 200, type: 'status', effect: 'paralyze', chance: 0.4, upgradeCost: 100, maxLevel: 3, desc: '全体を確率で麻痺に' },
+            bomb: { id: 'bomb', name: '爆弾', cost: 300, type: 'damage_all', power: 50, upgradeCost: 150, maxLevel: 5, desc: '全体に大ダメージ' }
         };
 
         Game.MONSTER_DATA = {
-            goblin: { id: 'goblin', name: 'ゴブリン', hp: 15, atk: 3, def: 1, spd: 5, cost: 30, req: null },
-            slime: { id: 'slime', name: 'スライム', hp: 20, atk: 2, def: 2, spd: 3, cost: 30, req: null },
-            orc: { id: 'orc', name: 'オーク', hp: 40, atk: 6, def: 3, spd: 4, cost: 100, req: null },
-            skeleton: { id: 'skeleton', name: 'スケルトン', hp: 25, atk: 5, def: 2, spd: 6, cost: 80, req: null },
-            lizardman: { id: 'lizardman', name: 'リザードマン', hp: 35, atk: 7, def: 4, spd: 7, cost: 150, req: 'res_lizard' },
-            werewolf: { id: 'werewolf', name: 'ワーウルフ', hp: 45, atk: 9, def: 3, spd: 12, cost: 200, req: 'res_wolf' },
-            golem: { id: 'golem', name: 'ゴーレム', hp: 80, atk: 8, def: 10, spd: 2, cost: 300, req: 'res_golem' },
-            lich: { id: 'lich', name: 'リッチ', hp: 50, atk: 15, def: 5, spd: 8, cost: 400, req: 'res_lich' },
-            dragon: { id: 'dragon', name: 'ドラゴン', hp: 150, atk: 20, def: 15, spd: 10, cost: 1000, req: 'res_dragon' }
-        };
-
-        Game.RESEARCH_TREE = {
-            res_goblin: { name: 'ゴブリン強化', cost: 50, desc: '全ゴブリンのステータス+20%' },
-            res_slime: { name: 'スライム強化', cost: 50, desc: '全スライムのステータス+20%' },
-            res_trap_adv: { name: '高度な罠', cost: 100, desc: 'スタンガン、爆弾の罠を解放' },
-            res_lizard: { name: '爬虫類召喚学', cost: 80, desc: 'リザードマンを召喚可能になる' },
-            res_wolf: { name: '獣人召喚学', cost: 120, desc: 'ワーウルフを召喚可能になる' },
-            res_golem: { name: 'ゴーレム錬成', cost: 200, desc: 'ゴーレムを召喚可能になる' },
-            res_lich: { name: '死霊魔術の極意', cost: 350, desc: 'リッチを召喚可能になる' },
-            res_dragon: { name: '竜の盟約', cost: 800, desc: 'ドラゴンを召喚可能になる' }
-        };
-
-        Game.HERO_CLASSES = {
-            warrior: { name: '戦士', hpMult: 1.2, atkMult: 1.0, defMult: 1.2, spdMult: 0.8 },
-            mage: { name: '魔法使い', hpMult: 0.7, atkMult: 1.5, defMult: 0.5, spdMult: 0.9 },
-            thief: { name: '盗賊', hpMult: 0.8, atkMult: 0.8, defMult: 0.8, spdMult: 1.5, ability: 'evade' },
-            priest: { name: '僧侶', hpMult: 0.9, atkMult: 0.5, defMult: 1.0, spdMult: 0.7, ability: 'heal' },
-            archer: { name: '狩人', hpMult: 0.8, atkMult: 1.2, defMult: 0.7, spdMult: 1.2 },
-            paladin: { name: '聖騎士', hpMult: 1.5, atkMult: 1.1, defMult: 1.5, spdMult: 0.8, ability: 'armor' }
+            goblin: { id: 'goblin', name: 'ゴブリン', icon: '👺', hp: 30, atk: 12, def: 5, spd: 15, cost: 30, req: null },
+            slime: { id: 'slime', name: 'スライム', icon: '💧', hp: 40, atk: 8, def: 15, spd: 5, cost: 30, req: null },
+            orc: { id: 'orc', name: 'オーク', icon: '🐗', hp: 60, atk: 18, def: 8, spd: 8, cost: 50, req: null },
+            skeleton: { id: 'skeleton', name: 'スケルトン', icon: '💀', hp: 45, atk: 15, def: 10, spd: 20, cost: 80, req: 'res_skeleton' },
+            golem: { id: 'golem', name: 'ゴーレム', icon: '🪨', hp: 120, atk: 25, def: 30, spd: 3, cost: 150, req: 'res_golem' },
+            lizardman: { id: 'lizardman', name: 'リザードマン', icon: '🦎', hp: 70, atk: 22, def: 15, spd: 18, cost: 120, req: 'res_lizard' },
+            werewolf: { id: 'werewolf', name: 'ワーウルフ', icon: '🐺', hp: 55, atk: 30, def: 12, spd: 25, cost: 140, req: 'res_werewolf' },
+            dragon: { id: 'dragon', name: 'ドラゴン', icon: '🐉', hp: 300, atk: 60, def: 40, spd: 30, cost: 500, req: 'res_dragon' },
+            lich: { id: 'lich', name: 'リッチ', icon: '🧟', hp: 150, atk: 45, def: 20, spd: 22, cost: 400, req: 'res_lich' },
+            demon_lord: { id: 'demon_lord', name: '魔王分身', icon: '👿', hp: 500, atk: 80, def: 50, spd: 40, cost: 2000, req: 'res_demon_lord' }
         };
 
         Game.HERO_RANKS = {
-            F: { mult: 1.0, gold: 5 },
-            E: { mult: 1.5, gold: 10 },
-            D: { mult: 2.2, gold: 20 },
-            C: { mult: 3.5, gold: 50 },
-            B: { mult: 5.5, gold: 120 },
-            A: { mult: 9.0, gold: 300 }
+            'F': { mult: 1.0, gold: 10 }, 'E': { mult: 1.5, gold: 15 }, 'D': { mult: 2.2, gold: 25 },
+            'C': { mult: 3.5, gold: 40 }, 'B': { mult: 5.5, gold: 80 }, 'A': { mult: 8.5, gold: 150 },
+            'S': { mult: 15.0, gold: 400 }, 'SS': { mult: 25.0, gold: 1000 }
+        };
+
+        Game.HERO_CLASSES = {
+            warrior: { name: '戦士', icon: '🗡️', hpMult: 1.5, atkMult: 1.2, defMult: 1.3, spdMult: 0.9, ability: 'none' },
+            mage: { name: '魔法使い', icon: '🧙', hpMult: 0.8, atkMult: 1.8, defMult: 0.7, spdMult: 1.1, ability: 'none' },
+            priest: { name: '僧侶', icon: '⛪', hpMult: 0.9, atkMult: 0.5, defMult: 1.0, spdMult: 1.0, ability: 'heal' },
+            thief: { name: '盗賊', icon: '🥷', hpMult: 0.9, atkMult: 1.1, defMult: 0.8, spdMult: 2.0, ability: 'evade' },
+            archer: { name: '弓使い', icon: '🏹', hpMult: 1.0, atkMult: 1.4, defMult: 0.9, spdMult: 1.3, ability: 'none' },
+            paladin: { name: '聖騎士', icon: '🛡️', hpMult: 1.8, atkMult: 1.0, defMult: 1.8, spdMult: 0.8, ability: 'protect' }
+        };
+
+        Game.RESEARCH_TREE = {
+            res_goblin: { id: 'res_goblin', name: '強化ゴブリン', cost: 50, desc: 'ゴブリン基礎ステ+20%' },
+            res_slime: { id: 'res_slime', name: '強化スライム', cost: 50, desc: 'スライム基礎ステ+20%' },
+            res_trap_adv: { id: 'res_trap_adv', name: '高度な罠術', cost: 100, desc: '電撃罠、爆弾が設置可能に' },
+            res_skeleton: { id: 'res_skeleton', name: '骨術解放', cost: 80, desc: 'スケルトン召喚可能に' },
+            res_golem: { id: 'res_golem', name: '魔像精製', cost: 150, desc: 'ゴーレム召喚可能に' },
+            res_lizard: { id: 'res_lizard', name: '竜人族盟約', cost: 120, desc: 'リザードマン召喚可能に' },
+            res_werewolf: { id: 'res_werewolf', name: '獣人契約', cost: 140, desc: 'ワーウルフ召喚可能に' },
+            res_dragon: { id: 'res_dragon', name: '古竜孵化', cost: 500, desc: 'ドラゴン召喚可能に' },
+            res_lich: { id: 'res_lich', name: '死霊王秘術', cost: 400, desc: 'リッチ召喚可能に' },
+            res_demon_lord: { id: 'res_demon_lord', name: '魔王覚醒', cost: 1000, desc: '魔王分身が配置可能に' }
         };
 
         Game.BOSS_SCHEDULE = {
-            10: { name: '近隣の村の討伐隊', rank: 'E', count: 3, class: 'warrior' },
-            20: { name: '王国正規軍 先遣隊', rank: 'D', count: 4 },
-            40: { name: '名のある冒険者パーティ', rank: 'C', count: 5, special: ['warrior', 'priest', 'mage', 'thief', 'archer'] },
-            60: { name: '王国近衛騎士団', rank: 'B', count: 5, class: 'paladin' },
-            80: { name: '勇者一行', rank: 'A', count: 5, special: ['paladin', 'priest', 'mage', 'warrior', 'thief'] },
-            100: { name: '伝説の勇者', rank: 'A', count: 6, special: ['paladin', 'paladin', 'priest', 'mage', 'archer', 'thief'] }
+            10: { name: '新米勇者パーティ', rank: 'E', count: 3 },
+            20: { name: '王国騎士団先遣隊', rank: 'D', count: 4 },
+            40: { name: 'ベテラン冒険者部隊', rank: 'C', count: 4, class: 'warrior' },
+            60: { name: '七英雄の末裔', rank: 'B', count: 5 },
+            80: { name: '伝説の騎士と聖女', rank: 'A', count: 4, special: ['paladin', 'priest'] },
+            90: { name: '勇者王の先触れ', rank: 'S', count: 5 },
+            100: { name: '勇者王と希望の光', rank: 'SS', count: 6, isFinal: true }
         };
 
         // -----------------------------------------
-        // 2. ゲーム状態管理 (State)
+        // 2. 状態管理
         // -----------------------------------------
         Game.state = {
-            day: 1,
-            gold: 200,
-            rp: 0,
-            dungeon: [], // 部屋の配列 { id, type, trap: {type, level}, monsters: [uuid...] }
-            monsters: [], // 所属モンスター { uuid, type, level, exp, hp, atk, def, spd }
-            research: {}, // 解放済み研究 { res_goblin: true, ... }
+            day: 1, gold: 200, rp: 0,
+            dungeon: [],
+            monsters: [],
+            research: {},
             logs: [],
-            // ▼リアルタイム戦闘用ステート
+            
+            // リアルタイム侵攻用ステート
             isInvading: false,
             activeHeroes: [],
             currentRoomIndex: -1,
-            gameSpeed: 1 // 進行速度
+
+            // UI操作用ステート
+            selectedMonsterUuid: null
         };
+        
+        Game.combatTimer = null; // 戦闘ループ用のタイマーID保持用
 
-        // -----------------------------------------
-        // 3. 初期化処理・セーブ＆ロード
-        // -----------------------------------------
-        Game.init = function() {
-            // 初期状態の作成（セーブデータがない場合）
-            if (Game.state.dungeon.length === 0) {
-                Game.state.dungeon.push(Game.createRoom('entrance'));
-                Game.state.dungeon.push(Game.createRoom('corridor'));
-                Game.state.dungeon.push(Game.createRoom('boss_room'));
-                
-                // 初期モンスタープレゼント
-                Game.state.monsters.push(Game.generateMonster('goblin'));
-                Game.state.monsters.push(Game.generateMonster('slime'));
-            }
-
-            // UIの初期描画
-            Game.renderAll();
-        };
-
-        Game.saveGame = function() {
-            localStorage.setItem('dungeonLordSave', JSON.stringify(Game.state));
-            Game.log('sys', 'ゲームをセーブしました。');
-            alert('セーブ完了しました。');
-        };
-
-        Game.loadGame = function() {
-            const save = localStorage.getItem('dungeonLordSave');
-            if (save) {
-                Game.state = JSON.parse(save);
-                // セーブデータが侵攻中の場合の中断対応（リセット）
-                if(Game.state.isInvading) {
-                    Game.state.isInvading = false;
-                    Game.state.activeHeroes = [];
-                    Game.state.currentRoomIndex = -1;
-                    Game.log('sys', '侵攻途中のデータだったため、戦闘前の状態にリセットしました。');
-                }
-                Game.log('sys', 'ゲームをロードしました。');
-                Game.renderAll();
-                document.getElementById('game-overlay').classList.add('hidden');
-                document.getElementById('btn-next-day').disabled = false;
-            } else {
-                alert('セーブデータがありません。');
-            }
-        };
-
-        Game.resetGame = function() {
-            localStorage.removeItem('dungeonLordSave');
-            location.reload();
-        };
-
-        // -----------------------------------------
-        // 4. データ操作ユーティリティ
-        // -----------------------------------------
         Game.generateUUID = function() {
             return 'xxxx-xxxx-xxxx-xxxx'.replace(/[x]/g, function(c) {
                 const r = Math.random() * 16 | 0; return r.toString(16);
@@ -504,191 +403,400 @@
         };
 
         Game.createRoom = function(typeStr) {
-            return {
-                id: Game.generateUUID(),
-                type: typeStr,
-                trap: null,
-                monsters: [] // 配置されているモンスターのUUID
-            };
+            return { id: Game.generateUUID(), type: typeStr, trap: null, monsters: [] };
         };
 
         Game.generateMonster = function(typeStr) {
             const base = Game.MONSTER_DATA[typeStr];
             let hpMult = 1, atkMult = 1, defMult = 1, spdMult = 1;
-
-            // 研究によるボーナス
             if (typeStr === 'goblin' && Game.state.research['res_goblin']) { hpMult=1.2; atkMult=1.2; defMult=1.2; spdMult=1.2; }
             if (typeStr === 'slime' && Game.state.research['res_slime']) { hpMult=1.2; atkMult=1.2; defMult=1.2; spdMult=1.2; }
 
             return {
-                uuid: Game.generateUUID(),
-                type: typeStr,
-                level: 1,
-                exp: 0,
-                maxHp: Math.floor(base.hp * hpMult),
-                atk: Math.floor(base.atk * atkMult),
-                def: Math.floor(base.def * defMult),
-                spd: Math.floor(base.spd * spdMult),
-                // 戦闘中の一時変数用
-                currentHp: Math.floor(base.hp * hpMult),
-                status: {}
+                uuid: Game.generateUUID(), type: typeStr, level: 1, exp: 0,
+                maxHp: Math.floor(base.hp * hpMult), atk: Math.floor(base.atk * atkMult),
+                def: Math.floor(base.def * defMult), spd: Math.floor(base.spd * spdMult),
+                currentHp: Math.floor(base.hp * hpMult), status: {}
             };
         };
 
         Game.log = function(type, text) {
             Game.state.logs.push({type, text});
-            if (Game.state.logs.length > 100) Game.state.logs.shift(); // 最大100件
-            Game.renderLogs();
+            if (Game.state.logs.length > 100) Game.state.logs.shift();
+            // ログタブを開いていなくても裏で更新
+            const logBox = document.getElementById('battle-log');
+            if(logBox) {
+                const div = document.createElement('div');
+                let cssClass = 'text-white';
+                if(type === 'sys') cssClass = 'log-sys';
+                if(type === 'hero') cssClass = 'log-hero';
+                if(type === 'monster') cssClass = 'log-monster';
+                if(type === 'dmg') cssClass = 'log-dmg';
+                if(type === 'heal') cssClass = 'log-heal';
+                if(type === 'crit') cssClass = 'log-crit';
+                if(type === 'status') cssClass = 'log-status';
+                if(type === 'event') cssClass = 'log-event';
+                if(type === 'win') cssClass = 'log-win';
+                if(type === 'lose') cssClass = 'log-lose';
+                div.className = cssClass;
+                div.innerHTML = text.replace(/\n/g, '<br>');
+                logBox.appendChild(div);
+                logBox.parentElement.scrollTop = logBox.parentElement.scrollHeight; // 自動スクロール
+            }
         };
 
         // -----------------------------------------
-        // 5. UI描画ロジック
+        // 3. セーブ＆ロード・初期化
         // -----------------------------------------
+        Game.init = function() {
+            if (Game.state.dungeon.length === 0) {
+                Game.state.dungeon.push(Game.createRoom('entrance'));
+                Game.state.dungeon.push(Game.createRoom('corridor'));
+                Game.state.dungeon.push(Game.createRoom('boss_room'));
+                Game.state.monsters.push(Game.generateMonster('goblin'));
+                Game.state.monsters.push(Game.generateMonster('slime'));
+            }
+            Game.renderAll();
+            Game.setupDragAndDrop();
+        };
+
+        Game.saveGame = function() {
+            Game.showSaveDialog(false);
+        };
+
+        Game.showSaveDialog = function(isEndOfDay) {
+            try {
+                const jsonStr = JSON.stringify(Game.state);
+                const saveCode = btoa(encodeURIComponent(jsonStr));
+                
+                document.getElementById('save-code-textarea').value = saveCode;
+                document.getElementById('save-dialog').classList.remove('hidden');
+                
+                const skipBtn = document.getElementById('btn-skip-save');
+                if (isEndOfDay) {
+                    skipBtn.style.display = 'inline-block';
+                    skipBtn.innerText = 'セーブせずに次の日へ';
+                } else {
+                    skipBtn.style.display = 'none';
+                    Game.log('sys', '手動セーブ用の復元の呪文を発行しました。');
+                }
+            } catch (e) {
+                alert('セーブデータの生成に失敗しました。');
+            }
+        };
+
+        Game.copySaveCode = function() {
+            const textArea = document.getElementById('save-code-textarea');
+            textArea.select();
+            try {
+                document.execCommand("copy");
+                alert('【復元の呪文】をクリップボードにコピーしました！\nメモ帳などにペーストして保存してください。');
+            } catch (err) {
+                alert('コピーに失敗しました。手動でコピーしてください。');
+            }
+            Game.closeSaveDialog();
+        };
+
+        Game.closeSaveDialog = function() {
+            document.getElementById('save-dialog').classList.add('hidden');
+        };
+
+        Game.loadGame = function() {
+            // ロード用のダイアログを表示する
+            document.getElementById('load-code-textarea').value = '';
+            document.getElementById('load-dialog').classList.remove('hidden');
+        };
+
+        Game.closeLoadDialog = function() {
+            document.getElementById('load-dialog').classList.add('hidden');
+        };
+
+        Game.executeLoad = function() {
+            let saveCode = document.getElementById('load-code-textarea').value;
+            if (!saveCode) {
+                alert('コードが入力されていません。');
+                return;
+            }
+
+            try {
+                // コピーペースト時に混入しがちな改行や空白を除去してエラーを防ぐ
+                saveCode = saveCode.replace(/\s/g, '');
+                
+                const jsonStr = decodeURIComponent(atob(saveCode));
+                Game.state = JSON.parse(jsonStr);
+
+                Game.state.selectedMonsterUuid = null; // ロード時に選択状態をリセット
+
+                if(Game.state.isInvading) {
+                    Game.state.isInvading = false;
+                    Game.state.activeHeroes = [];
+                    Game.state.currentRoomIndex = -1;
+                    Game.log('sys', '侵攻途中のデータだったため、戦闘前の状態にリセットしました。');
+                }
+                Game.log('sys', '復元の呪文を解読し、ダンジョンを復元しました。');
+                Game.renderAll();
+                document.getElementById('game-overlay').classList.add('hidden');
+                Game.setUIInteraction(true);
+                Game.closeLoadDialog(); // ロード成功時にダイアログを閉じる
+                alert('ロードに成功しました！');
+            } catch(e) {
+                alert('無効な復元の呪文です。コピーミスか、コードが破損しています。');
+                console.error(e);
+            }
+        };
+
+        Game.resetGame = function() {
+            location.reload(); // リロードして初期状態に
+        };
+
+        // -----------------------------------------
+        // 4. UI描画・操作
+        // -----------------------------------------
+        Game.switchTab = function(targetId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(targetId).classList.add('active');
+            document.querySelector(`.tab-btn[data-target="${targetId}"]`).classList.add('active');
+            
+            if(targetId === 'tab-build') Game.renderTrapList();
+        };
+
+        Game.setUIInteraction = function(enabled) {
+            const btn = document.getElementById('btn-next-day');
+            if(enabled) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                btn.innerText = '次の日へ進む (侵攻開始)';
+            } else {
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+                btn.innerText = '⚔️ 侵攻中...';
+            }
+        };
+
         Game.renderAll = function() {
             document.getElementById('ui-day').innerText = Game.state.day;
             document.getElementById('ui-gold').innerText = Game.state.gold;
             document.getElementById('ui-rp').innerText = Game.state.rp;
 
             Game.renderMap();
+            Game.renderRoster();
             Game.renderBuildList();
             Game.renderTrapList();
             Game.renderSummonList();
             Game.renderResearchList();
-            Game.renderMonsters();
-        };
-
-        Game.renderLogs = function() {
-            const logBox = document.getElementById('battle-log');
-            logBox.innerHTML = Game.state.logs.map(l => {
-                let cssClass = 'text-gray-300';
-                if(l.type === 'sys') cssClass = 'log-sys';
-                if(l.type === 'hero') cssClass = 'log-hero';
-                if(l.type === 'monster') cssClass = 'log-monster';
-                if(l.type === 'dmg') cssClass = 'log-dmg';
-                if(l.type === 'heal') cssClass = 'log-heal';
-                if(l.type === 'crit') cssClass = 'log-crit';
-                if(l.type === 'status') cssClass = 'log-status';
-                if(l.type === 'event') cssClass = 'log-event mt-2';
-                if(l.type === 'win') cssClass = 'log-win';
-                if(l.type === 'lose') cssClass = 'log-lose';
-                return `<div class="${cssClass}">${l.text}</div>`;
-            }).join('');
-            // 自動スクロール
-            logBox.scrollTop = logBox.scrollHeight;
         };
 
         Game.renderMap = function() {
             const mapBox = document.getElementById('dungeon-map');
             const trapSelect = document.getElementById('trap-room-select');
-            
             let mapHtml = '';
             let trapOptions = '<option value="">-- 部屋を選択 --</option>';
+
+            const isPlacing = Game.state.selectedMonsterUuid !== null && !Game.state.isInvading;
 
             Game.state.dungeon.forEach((room, index) => {
                 const rType = Game.ROOM_TYPES[room.type];
                 
-                // --- モンスターアイコン生成（左側） ---
-                let mHtml = '';
-                room.monsters.forEach(uuid => {
+                // 配置モンスターアイコン
+                const mIcons = room.monsters.map(uuid => {
                     const m = Game.state.monsters.find(x => x.uuid === uuid);
-                    if(m) {
-                        const isDead = m.currentHp <= 0;
-                        const hpPct = Math.max(0, (m.currentHp/m.maxHp)*100);
-                        const emoji = Game.EMOJI_MONSTER[m.type] || '👾';
-                        mHtml += `
-                            <div class="character-icon monster ${isDead ? 'opacity-40 grayscale' : ''}" 
-                                 title="${Game.MONSTER_DATA[m.type].name} Lv${m.level}\nHP: ${m.currentHp}/${m.maxHp}">
-                                ${emoji}
-                                <div class="hp-bar-mini">
-                                    <div style="height:100%; background-color:#f56565; width:${hpPct}%"></div>
-                                </div>
-                                <div class="absolute -bottom-5 text-[10px] whitespace-nowrap text-gray-400 font-bold">Lv${m.level}</div>
-                            </div>
-                        `;
-                    }
-                });
+                    if(!m) return '';
+                    const base = Game.MONSTER_DATA[m.type];
+                    const hpPct = Math.max(0, (m.currentHp / m.maxHp) * 100);
+                    const isSelected = Game.state.selectedMonsterUuid === m.uuid ? 'selected-char' : '';
+                    return `
+                        <div class="char-icon char-monster ${isSelected}" onclick="event.stopPropagation(); Game.selectMonster('${m.uuid}')" id="m-icon-${m.uuid}" title="${base.name} Lv${m.level}\nHP: ${m.currentHp}/${m.maxHp}">
+                            ${base.icon}
+                            <div class="hp-bar-mini"><div class="hp-bar-mini-fill" style="width:${hpPct}%"></div></div>
+                        </div>`;
+                }).join('');
 
-                // --- 勇者アイコン生成（右側） ---
-                let hHtml = '';
-                if (Game.state.isInvading && Game.state.currentRoomIndex === index && Game.state.activeHeroes.length > 0) {
-                    Game.state.activeHeroes.forEach(h => {
-                        const isDead = h.hp <= 0;
-                        const hpPct = Math.max(0, (h.hp/h.maxHp)*100);
-                        const emoji = Game.EMOJI_HERO[h.class] || '🧑';
-                        hHtml += `
-                            <div class="character-icon hero ${isDead ? 'opacity-30 grayscale' : 'animate-bounce'}" 
-                                 title="${h.name}\nHP: ${Math.max(0, h.hp)}/${h.maxHp}">
-                                ${emoji}
-                                <div class="hp-bar-mini">
-                                    <div style="height:100%; background-color:#4299e1; width:${hpPct}%"></div>
-                                </div>
-                            </div>
-                        `;
-                    });
+                // 勇者アイコン（交戦中の部屋のみ）
+                let hIcons = '';
+                if (Game.state.isInvading && Game.state.currentRoomIndex === index && Game.state.activeHeroes) {
+                    hIcons = Game.state.activeHeroes.filter(h => h.hp > 0).map(h => {
+                        const base = Game.HERO_CLASSES[h.class];
+                        const hpPct = Math.max(0, (h.hp / h.maxHp) * 100);
+                        return `
+                            <div class="char-icon char-hero" id="h-icon-${h.id}" title="${h.name}\nHP: ${h.hp}/${h.maxHp}">
+                                ${base.icon}
+                                <div class="hp-bar-mini"><div class="hp-bar-mini-fill" style="width:${hpPct}%"></div></div>
+                            </div>`;
+                    }).join('');
                 }
 
-                // 部屋のハイライト状態
-                let isCurrentRoom = Game.state.isInvading && Game.state.currentRoomIndex === index;
+                // 罠情報
+                let trapInfo = '';
+                if(room.trap) {
+                    const t = Game.TRAP_DATA[room.trap.type];
+                    trapInfo = `<div class="text-xs text-orange-400 absolute top-2 right-2 border border-orange-500 rounded px-1">罠: ${t.name} Lv${room.trap.level}</div>`;
+                }
 
-                // 部屋全体のHTML構築
+                // 部屋のハイライト（勇者がいる場所、または配置可能な部屋）
+                let roomClasses = '';
+                if (Game.state.isInvading && Game.state.currentRoomIndex === index) {
+                    roomClasses = 'border-red-500 bg-red-900 bg-opacity-30';
+                } else if (isPlacing && rType.maxMonsters > 0) {
+                    roomClasses = 'placeable';
+                }
+
                 mapHtml += `
-                    <div class="rpg-room ${isCurrentRoom ? 'active-room' : ''}" 
-                         ondrop="Game.onDrop(event, '${room.id}')" ondragover="Game.onDragOver(event)">
-                        
-                        <!-- 部屋ヘッダー -->
-                        <div class="flex justify-between items-center border-b border-gray-700 pb-2 mb-3">
-                            <div class="font-bold text-lg ${isCurrentRoom ? 'text-yellow-400 drop-shadow-md' : 'text-blue-300'}">
-                                ${index === 0 ? '🚪 ' : ''}${index === Game.state.dungeon.length-1 ? '☠️ ' : ''}B${index}F: ${rType.name}
+                    <div class="room-card ${roomClasses} droppable-room flex flex-col justify-between" data-roomid="${room.id}" onclick="Game.placeMonster('${room.id}')">
+                        <div class="font-bold text-blue-200 text-sm mb-1">
+                            ${index === 0 ? '🔽 ' : ''}${index === Game.state.dungeon.length-1 ? '☠️ ' : ''}
+                            階層${index}: ${rType.name}
+                        </div>
+                        ${trapInfo}
+                        <div class="flex justify-between items-end mt-2 min-h-[50px]">
+                            <div class="flex flex-wrap gap-1 w-1/2 justify-start items-center">
+                                ${mIcons}
+                                ${room.monsters.length === 0 && rType.maxMonsters > 0 ? '<span class="text-xs text-gray-500 italic ml-2">空き</span>' : ''}
                             </div>
-                            <div class="flex items-center gap-2">
-                                ${room.trap ? `<span class="text-xs bg-orange-900 text-orange-200 px-2 py-1 rounded border border-orange-700 shadow-sm">⚠️ ${Game.TRAP_DATA[room.trap.type].name} Lv${room.trap.level}</span>` : ''}
-                                <span class="text-xs text-gray-500">収容:${room.monsters.length}/${rType.maxMonsters}</span>
+                            <div class="flex flex-wrap gap-1 w-1/2 justify-end items-center">
+                                ${hIcons}
                             </div>
                         </div>
                         
-                        <!-- キャラクター配置エリア -->
-                        <div class="entity-area">
-                            <!-- 左：モンスター陣地 -->
-                            <div class="w-1/2 min-h-[60px] flex flex-wrap gap-4 items-center justify-start border-r-2 border-dashed border-gray-700 pr-3">
-                                ${mHtml || `<span class="text-xs text-gray-600 italic select-none">モンスター未配置<br>(ドラッグ&ドロップ可)</span>`}
-                            </div>
-                            
-                            <!-- 右：勇者陣地 -->
-                            <div class="w-1/2 min-h-[60px] flex flex-wrap gap-3 items-center justify-end pl-3 relative">
-                                ${hHtml}
-                                ${isCurrentRoom && hHtml ? '<div class="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 text-2xl animate-pulse">⚔️</div>' : ''}
-                            </div>
-                        </div>
-
-                        <!-- 撤去ボタン (侵攻中以外で表示) -->
                         ${room.type !== 'entrance' && room.type !== 'boss_room' && !Game.state.isInvading ? 
-                            `<button class="absolute -right-3 -top-3 bg-red-800 hover:bg-red-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm shadow-lg border border-red-400 transition-colors" title="この部屋を撤去" onclick="Game.destroyRoom('${room.id}')">✕</button>` : ''}
+                            `<button class="absolute bottom-2 left-2 text-xs text-red-500 bg-black bg-opacity-50 px-1 rounded hover:bg-red-900" onclick="event.stopPropagation(); Game.destroyRoom('${room.id}')">撤去</button>` : ''}
                     </div>
-                    ${index < Game.state.dungeon.length -1 ? '<div class="room-path"></div>' : ''}
+                    ${index < Game.state.dungeon.length -1 ? '<div class="text-center text-gray-600 my-1 text-xl">↓</div>' : ''}
                 `;
 
-                // 罠設置用のセレクトボックス更新 (入口・ボス以外)
                 if(room.type !== 'entrance' && room.type !== 'boss_room') {
-                    trapOptions += `<option value="${room.id}">B${index}F: ${rType.name}</option>`;
+                    trapOptions += `<option value="${room.id}">階層${index}: ${rType.name}</option>`;
                 }
             });
             mapBox.innerHTML = mapHtml;
             
-            // 選択状態を保持しつつ更新
             const currentVal = trapSelect.value;
             trapSelect.innerHTML = trapOptions;
             if(currentVal) trapSelect.value = currentVal;
             else if(Game.state.dungeon.length > 2) trapSelect.value = Game.state.dungeon[1].id;
-            
-            // 現在の部屋へ自動スクロール（侵攻中のみ）
-            if (Game.state.isInvading && Game.state.currentRoomIndex >= 0) {
-                const activeRoomEl = mapBox.querySelector('.active-room');
-                if (activeRoomEl) {
-                    activeRoomEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            }
+
+            Game.setupDragAndDrop(); // 再描画したのでD&D再設定
         };
 
+        Game.renderRoster = function() {
+            const box = document.getElementById('monster-roster');
+            let html = '';
+            
+            // ダンジョンに配置されていないモンスター（待機）のみ表示
+            const standbyMonsters = Game.state.monsters.filter(m => {
+                let inRoom = false;
+                Game.state.dungeon.forEach(r => { if(r.monsters.includes(m.uuid)) inRoom = true; });
+                return !inRoom;
+            });
+
+            if (standbyMonsters.length === 0) {
+                box.innerHTML = '<div class="text-sm text-gray-500 w-full text-center py-4">待機中のモンスターはいません。</div>';
+                return;
+            }
+
+            standbyMonsters.forEach(m => {
+                const base = Game.MONSTER_DATA[m.type];
+                const hpPct = Math.max(0, (m.currentHp / m.maxHp) * 100);
+                const expPct = Math.max(0, Math.min(100, (m.exp / (m.level * 20)) * 100));
+                const isDead = m.currentHp <= 0;
+                const isSelected = Game.state.selectedMonsterUuid === m.uuid ? 'selected-char' : '';
+
+                // モンスターカードを横長にし、ステータスとEXPバーを追加
+                html += `
+                    <div class="monster-card w-48 text-left flex flex-col ${isDead ? 'opacity-50 grayscale' : ''} ${isSelected}" onclick="event.stopPropagation(); ${!isDead && !Game.state.isInvading ? `Game.selectMonster('${m.uuid}')` : ''}">
+                        <div class="flex items-center space-x-2 border-b border-gray-600 pb-1 mb-1">
+                            <div class="text-3xl">${base.icon}</div>
+                            <div class="flex-1 overflow-hidden">
+                                <div class="font-bold text-red-400 text-sm truncate">${base.name}</div>
+                                <div class="text-xs text-gray-300">Lv${m.level}</div>
+                            </div>
+                        </div>
+                        <div class="text-[10px] text-gray-300 grid grid-cols-2 gap-x-1 gap-y-0.5 mb-1 bg-black bg-opacity-30 p-1 rounded">
+                            <div>HP: ${m.currentHp}/${m.maxHp}</div>
+                            <div>攻: ${m.atk}</div>
+                            <div>防: ${m.def}</div>
+                            <div>速: ${m.spd}</div>
+                        </div>
+                        <div class="w-full mb-1">
+                            <div class="flex justify-between text-[9px] text-gray-400 mb-px">
+                                <span>EXP</span><span>${m.exp} / ${m.level * 20}</span>
+                            </div>
+                            <div class="w-full bg-gray-700 h-1.5 rounded overflow-hidden">
+                                <div class="bg-blue-500 h-full" style="width: ${expPct}%"></div>
+                            </div>
+                        </div>
+                        <div class="w-full bg-gray-800 h-2 rounded overflow-hidden mt-auto border border-gray-700">
+                            <div class="bg-red-500 h-full" style="width: ${hpPct}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            box.innerHTML = html;
+        };
+
+        // -----------------------------------------
+        // 5. タップ配置（旧ドラッグ＆ドロップ）
+        // -----------------------------------------
+        Game.setupDragAndDrop = function() {
+            // 後方互換のため空関数化（初期化等で呼ばれるためエラー防止）
+        };
+
+        Game.selectMonster = function(uuid) {
+            if (Game.state.isInvading) return;
+            
+            if (Game.state.selectedMonsterUuid === uuid) {
+                // すでに選択中のものを再度タップした場合は選択解除
+                Game.state.selectedMonsterUuid = null;
+            } else {
+                // 新しく選択
+                Game.state.selectedMonsterUuid = uuid;
+            }
+            Game.renderMap();
+            Game.renderRoster();
+        };
+
+        Game.placeMonster = function(roomId) {
+            if (Game.state.isInvading || !Game.state.selectedMonsterUuid) return;
+            
+            Game.assignMonster(Game.state.selectedMonsterUuid, roomId);
+            Game.state.selectedMonsterUuid = null; // 配置後は選択状態を解除
+            Game.renderMap();
+            Game.renderRoster();
+        };
+
+        Game.returnToRoster = function() {
+            if (Game.state.isInvading || !Game.state.selectedMonsterUuid) return;
+            
+            Game.assignMonster(Game.state.selectedMonsterUuid, null);
+            Game.state.selectedMonsterUuid = null; // 待機に戻した後は選択状態を解除
+            Game.renderMap();
+            Game.renderRoster();
+        };
+
+        Game.assignMonster = function(monsterUuid, roomId) {
+            // 現在の配置から外す
+            Game.state.dungeon.forEach(r => {
+                const idx = r.monsters.indexOf(monsterUuid);
+                if (idx > -1) r.monsters.splice(idx, 1);
+            });
+
+            if (roomId) {
+                const targetRoom = Game.state.dungeon.find(r => r.id === roomId);
+                const rType = Game.ROOM_TYPES[targetRoom.type];
+                if (targetRoom && targetRoom.monsters.length < rType.maxMonsters) {
+                    targetRoom.monsters.push(monsterUuid);
+                } else {
+                    Game.log('sys', 'その部屋の配置上限に達しています。');
+                }
+            }
+            Game.renderMap();
+            Game.renderRoster();
+        };
+
+        // -----------------------------------------
+        // 6. 各種機能ロジック (建設・研究・召喚)
+        // -----------------------------------------
         Game.renderBuildList = function() {
             const box = document.getElementById('build-list');
             let html = '';
@@ -697,14 +805,12 @@
                 const r = Game.ROOM_TYPES[key];
                 const canBuy = Game.state.gold >= r.cost;
                 html += `
-                    <div class="facility-card">
-                        <div>
-                            <div class="font-bold text-blue-300">${r.name} <span class="text-yellow-400 text-sm ml-2">${r.cost}G</span></div>
-                            <div class="text-xs text-gray-400">${r.desc} (最大配置:${r.maxMonsters}体)</div>
+                    <div class="facility-card !p-2">
+                        <div class="flex-1">
+                            <div class="font-bold text-blue-300 text-sm">${r.name} <span class="text-yellow-400 ml-1">${r.cost}G</span></div>
+                            <div class="text-[10px] text-gray-400">${r.desc} (最大:${r.maxMonsters}体)</div>
                         </div>
-                        <button class="btn ${canBuy ? '' : 'btn-disabled'}" 
-                                ${canBuy ? '' : 'disabled'} 
-                                onclick="Game.buildRoom('${key}')">建設</button>
+                        <button class="btn !text-xs !p-1 ml-2" ${canBuy && !Game.state.isInvading ? '' : 'disabled'} onclick="Game.buildRoom('${key}')">建設</button>
                     </div>
                 `;
             }
@@ -716,18 +822,12 @@
             const selectedRoomId = document.getElementById('trap-room-select').value;
             let html = '';
 
-            if(!selectedRoomId) {
-                box.innerHTML = '<div class="text-sm text-gray-500">部屋を選択してください。</div>';
-                return;
-            }
-
+            if(!selectedRoomId) { box.innerHTML = '<div class="text-xs text-gray-500">部屋を選択してください。</div>'; return; }
             const room = Game.state.dungeon.find(r => r.id === selectedRoomId);
-            
-            // 高度な罠の解放チェック
             const advTrapUnlocked = Game.state.research['res_trap_adv'];
 
             for (let key in Game.TRAP_DATA) {
-                if ((key === 'stun_gun' || key === 'bomb') && !advTrapUnlocked) continue; // 未解放
+                if ((key === 'stun_gun' || key === 'bomb') && !advTrapUnlocked) continue;
 
                 const t = Game.TRAP_DATA[key];
                 const isInstalled = room.trap && room.trap.type === key;
@@ -737,30 +837,30 @@
                     const upCost = t.upgradeCost * room.trap.level;
                     const canUp = Game.state.gold >= upCost;
                     html += `
-                        <div class="facility-card border-orange-800">
-                            <div>
-                                <div class="font-bold text-orange-400">${t.name} <span class="text-xs bg-orange-600 text-white px-1 rounded ml-1">Lv${room.trap.level}</span></div>
-                                <div class="text-xs text-gray-400">${t.desc}</div>
+                        <div class="facility-card border-orange-800 !p-2">
+                            <div class="flex-1">
+                                <div class="font-bold text-orange-400 text-sm">${t.name} <span class="bg-orange-600 text-white px-1 rounded ml-1 text-xs">Lv${room.trap.level}</span></div>
+                                <div class="text-[10px] text-gray-400">${t.desc}</div>
                             </div>
-                            ${isMax ? '<span class="text-xs text-gray-500">MAX</span>' : 
-                                `<button class="btn" ${canUp ? '' : 'disabled'} onclick="Game.upgradeTrap('${room.id}')">強化(${upCost}G)</button>`}
+                            ${isMax ? '<span class="text-[10px] text-gray-500">MAX</span>' : 
+                                `<button class="btn !text-xs !p-1 ml-2" ${canUp && !Game.state.isInvading ? '' : 'disabled'} onclick="Game.upgradeTrap('${room.id}')">強化(${upCost}G)</button>`}
                         </div>
                     `;
                 } else if (!room.trap) {
                     const canBuy = Game.state.gold >= t.cost;
                     html += `
-                        <div class="facility-card">
-                            <div>
-                                <div class="font-bold text-gray-300">${t.name} <span class="text-yellow-400 text-sm ml-2">${t.cost}G</span></div>
-                                <div class="text-xs text-gray-400">${t.desc}</div>
+                        <div class="facility-card !p-2">
+                            <div class="flex-1">
+                                <div class="font-bold text-gray-300 text-sm">${t.name} <span class="text-yellow-400 ml-1">${t.cost}G</span></div>
+                                <div class="text-[10px] text-gray-400">${t.desc}</div>
                             </div>
-                            <button class="btn" ${canBuy ? '' : 'disabled'} onclick="Game.installTrap('${room.id}', '${key}')">設置</button>
+                            <button class="btn !text-xs !p-1 ml-2" ${canBuy && !Game.state.isInvading ? '' : 'disabled'} onclick="Game.installTrap('${room.id}', '${key}')">設置</button>
                         </div>
                     `;
                 }
             }
-            if(room.trap) {
-                 html += `<button class="btn w-full mt-2 !bg-red-900" onclick="Game.removeTrap('${room.id}')">罠を撤去する</button>`;
+            if(room.trap && !Game.state.isInvading) {
+                 html += `<button class="btn w-full mt-1 !bg-red-900 !text-xs !p-1" onclick="Game.removeTrap('${room.id}')">罠を撤去する</button>`;
             }
             box.innerHTML = html;
         };
@@ -770,21 +870,19 @@
             let html = '';
             for (let key in Game.MONSTER_DATA) {
                 const m = Game.MONSTER_DATA[key];
-                // 研究条件チェック
                 if (m.req && !Game.state.research[m.req]) continue;
 
                 const canBuy = Game.state.gold >= m.cost;
                 html += `
                     <div class="facility-card flex-col items-start !p-2">
                         <div class="flex justify-between w-full mb-1">
-                            <div class="font-bold text-red-300">${m.name}</div>
-                            <div class="text-yellow-400 text-sm">${m.cost}G</div>
+                            <div class="font-bold text-red-300 text-sm">${m.icon} ${m.name}</div>
+                            <div class="text-yellow-400 text-xs">${m.cost}G</div>
                         </div>
-                        <div class="text-xs text-gray-400 mb-2 w-full grid grid-cols-2 gap-1">
-                            <div>HP: ${m.hp}</div> <div>攻: ${m.atk}</div>
-                            <div>防: ${m.def}</div> <div>速: ${m.spd}</div>
+                        <div class="text-[10px] text-gray-400 mb-1 w-full flex justify-between">
+                            <span>HP:${m.hp}</span> <span>攻:${m.atk}</span> <span>防:${m.def}</span> <span>速:${m.spd}</span>
                         </div>
-                        <button class="btn w-full !p-1 text-sm" ${canBuy ? '' : 'disabled'} onclick="Game.summonMonster('${key}')">召喚</button>
+                        <button class="btn w-full !p-1 text-xs" ${canBuy && !Game.state.isInvading ? '' : 'disabled'} onclick="Game.summonMonster('${key}')">召喚</button>
                     </div>
                 `;
             }
@@ -800,17 +898,14 @@
                 const canBuy = !isResearched && Game.state.rp >= r.cost;
                 
                 let btnHtml = '';
-                if (isResearched) {
-                    btnHtml = `<span class="text-green-500 font-bold text-sm bg-green-900 px-2 py-1 rounded">研究済</span>`;
-                } else {
-                    btnHtml = `<button class="btn !bg-purple-800 hover:!bg-purple-600" ${canBuy ? '' : 'disabled'} onclick="Game.doResearch('${key}')">研究</button>`;
-                }
+                if (isResearched) btnHtml = `<span class="text-green-500 font-bold text-xs ml-2">研究済</span>`;
+                else btnHtml = `<button class="btn !text-xs !p-1 ml-2" ${canBuy && !Game.state.isInvading ? '' : 'disabled'} onclick="Game.doResearch('${key}')">研究</button>`;
 
                 html += `
-                    <div class="facility-card ${isResearched ? 'opacity-60 border-green-900' : 'border-purple-900'}">
-                        <div class="flex-1 mr-2">
-                            <div class="font-bold text-purple-300">${r.name} <span class="text-purple-400 text-sm ml-2">${r.cost}Pt</span></div>
-                            <div class="text-xs text-gray-400 mt-1">${r.desc}</div>
+                    <div class="facility-card !p-2 ${isResearched ? 'opacity-50' : ''}">
+                        <div class="flex-1">
+                            <div class="font-bold text-purple-300 text-sm">${r.name} <span class="text-purple-400 ml-1">${r.cost}Pt</span></div>
+                            <div class="text-[10px] text-gray-400">${r.desc}</div>
                         </div>
                         ${btnHtml}
                     </div>
@@ -819,136 +914,10 @@
             box.innerHTML = html;
         };
 
-        Game.renderMonsters = function() {
-            const box = document.getElementById('monster-roster');
-            
-            // 部屋のセレクトボックス用オプションを生成
-            let roomOptions = '<option value="">未配置(待機)</option>';
-            Game.state.dungeon.forEach((r, idx) => {
-                if (r.type !== 'entrance') {
-                    const rType = Game.ROOM_TYPES[r.type];
-                    roomOptions += `<option value="${r.id}">B${idx}F: ${rType.name} (${r.monsters.length}/${rType.maxMonsters})</option>`;
-                }
-            });
-
-            let html = '';
-            Game.state.monsters.forEach(m => {
-                const base = Game.MONSTER_DATA[m.type];
-                
-                // 現在どの部屋にいるか検索
-                let currentRoomId = "";
-                Game.state.dungeon.forEach(r => {
-                    if(r.monsters.includes(m.uuid)) currentRoomId = r.id;
-                });
-
-                const hpPercent = Math.max(0, (m.currentHp / m.maxHp) * 100);
-                const isDead = m.currentHp <= 0;
-                const emoji = Game.EMOJI_MONSTER[m.type] || '👾';
-
-                html += `
-                    <div class="monster-card ${isDead ? 'opacity-50 grayscale border-red-900' : 'cursor-pointer hover:border-blue-400 hover:shadow-lg transition-all'}" 
-                         ${isDead ? '' : `draggable="true" ondragstart="Game.onDragStart(event, '${m.uuid}')"`}
-                         title="左側のダンジョンマップへドラッグ＆ドロップで配置できます">
-                        <div class="flex justify-between items-center border-b border-gray-600 pb-2 mb-2 pointer-events-none">
-                            <div class="flex items-center gap-2">
-                                <span class="text-xl">${emoji}</span>
-                                <span class="font-bold text-red-300">${base.name} <span class="text-xs text-gray-400">Lv${m.level}</span></span>
-                            </div>
-                            ${isDead ? '<span class="text-xs bg-red-800 px-2 py-1 rounded text-white font-bold">死亡/回復中</span>' : ''}
-                        </div>
-                        <div class="text-xs grid grid-cols-2 gap-x-2 gap-y-1 mb-2 text-gray-300">
-                            <div class="col-span-2 flex items-center gap-2">
-                                <span>HP:</span>
-                                <div class="flex-1 bg-gray-800 h-2 rounded overflow-hidden border border-gray-700">
-                                    <div class="bg-red-500 h-full" style="width: ${hpPercent}%"></div>
-                                </div>
-                                <span>${m.currentHp}/${m.maxHp}</span>
-                            </div>
-                            <div>⚔️攻: ${m.atk}</div> <div>🛡️防: ${m.def}</div>
-                            <div>💨速: ${m.spd}</div> <div>⭐EXP: ${m.exp}/${m.level * 20}</div>
-                        </div>
-                        <div class="mt-2">
-                            <select class="w-full bg-gray-900 text-xs p-1.5 rounded border border-gray-600 text-gray-300 cursor-pointer" 
-                                    onchange="Game.assignMonster('${m.uuid}', this.value)" ${isDead ? 'disabled' : ''}>
-                                ${roomOptions.replace(`value="${currentRoomId}"`, `value="${currentRoomId}" selected`)}
-                            </select>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            if(Game.state.monsters.length === 0) {
-                html = '<div class="text-sm text-gray-500 text-center py-4">モンスターがいません。上の召喚陣から召喚してください。</div>';
-            }
-            
-            box.innerHTML = html;
-        };
-
-        // UI操作系
-        Game.switchTab = function(tabName) {
-            // 全タブコンテンツを隠す
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            // 全タブボタンの非アクティブ化
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            
-            // 指定タブの表示
-            const targetContent = document.getElementById(`tab-${tabName}`);
-            if(targetContent) {
-                targetContent.classList.remove('hidden');
-                // flexクラスを持っているもの（召喚タブなど）はflexで表示
-                if(targetContent.classList.contains('flex-col')) targetContent.style.display = 'flex';
-                else targetContent.style.display = 'block';
-            }
-            
-            // クリックされたボタン（または該当するボタン）をアクティブ化
-            const eventBtn = event ? event.currentTarget : document.querySelector(`.tab-btn[onclick*="${tabName}"]`);
-            if(eventBtn) eventBtn.classList.add('active');
-            
-            // 罠リストの再描画
-            if(tabName === 'build') Game.renderTrapList();
-            // ログの最下部スクロール
-            if(tabName === 'log') {
-                const logBox = document.getElementById('battle-log');
-                logBox.scrollTop = logBox.scrollHeight;
-            }
-        };
-
-        document.getElementById('trap-room-select').addEventListener('change', Game.renderTrapList);
-
-        // 侵攻中のUIロック
-        Game.setUIInteraction = function(enabled) {
-            const buttons = document.querySelectorAll('.panel button:not(#btn-next-day), header button:not(#btn-next-day)');
-            const selects = document.querySelectorAll('select');
-            
-            buttons.forEach(btn => {
-                btn.disabled = !enabled;
-                if(!enabled) btn.classList.add('opacity-50', 'cursor-not-allowed');
-                else btn.classList.remove('opacity-50', 'cursor-not-allowed');
-            });
-            selects.forEach(sel => sel.disabled = !enabled);
-
-            const nextBtn = document.getElementById('btn-next-day');
-            if(!enabled) {
-                nextBtn.innerText = "⚔️ 侵攻中...";
-                nextBtn.disabled = true;
-            } else {
-                nextBtn.innerText = "次の日へ進む (侵攻開始)";
-                nextBtn.disabled = false;
-            }
-        };
-
-        Game.changeSpeed = function(speed) {
-            Game.state.gameSpeed = parseFloat(speed);
-        };
-
-        // -----------------------------------------
-        // 6. プレイヤーアクション処理
-        // -----------------------------------------
         Game.buildRoom = function(type) {
             const r = Game.ROOM_TYPES[type];
             if (Game.state.gold >= r.cost) {
                 Game.state.gold -= r.cost;
-                // ボス部屋の「前」に挿入する
                 const newRoom = Game.createRoom(type);
                 Game.state.dungeon.splice(Game.state.dungeon.length - 1, 0, newRoom);
                 Game.log('sys', `${r.name}を建設しました。(-${r.cost}G)`);
@@ -958,10 +927,9 @@
 
         Game.destroyRoom = function(roomId) {
             const idx = Game.state.dungeon.findIndex(r => r.id === roomId);
-            if(idx > 0 && idx < Game.state.dungeon.length - 1) { // 入口とボス部屋は消せない
-                // 配置されていたモンスターを待機状態にする
+            if(idx > 0 && idx < Game.state.dungeon.length - 1) {
                 const room = Game.state.dungeon[idx];
-                room.monsters = []; // 参照を切るだけで、全体名簿には残る
+                room.monsters = [];
                 Game.state.dungeon.splice(idx, 1);
                 Game.log('sys', `部屋を撤去しました。`);
                 Game.renderAll();
@@ -974,7 +942,7 @@
             if (room && !room.trap && Game.state.gold >= trap.cost) {
                 Game.state.gold -= trap.cost;
                 room.trap = { type: trapType, level: 1 };
-                Game.log('sys', `${Game.ROOM_TYPES[room.type].name}に${trap.name}を設置しました。`);
+                Game.log('sys', `${trap.name}を設置しました。`);
                 Game.renderAll();
             }
         };
@@ -1019,7 +987,6 @@
                 Game.state.research[techId] = true;
                 Game.log('sys', `【研究完了】${r.name}`);
                 
-                // 既存モンスターのステータス再計算（強化系の場合）
                 if (techId === 'res_goblin' || techId === 'res_slime') {
                     Game.state.monsters.forEach(m => {
                         if (m.type === 'goblin' && techId === 'res_goblin') { m.maxHp = Math.floor(m.maxHp*1.2); m.currentHp = m.maxHp; m.atk = Math.floor(m.atk*1.2); m.def = Math.floor(m.def*1.2); }
@@ -1030,178 +997,227 @@
             }
         };
 
-        Game.assignMonster = function(monsterUuid, roomId) {
-            // まず現在の配置から外す
-            Game.state.dungeon.forEach(r => {
-                const idx = r.monsters.indexOf(monsterUuid);
-                if (idx > -1) r.monsters.splice(idx, 1);
-            });
-
-            // 新しい部屋に配置する
-            if (roomId) {
-                const targetRoom = Game.state.dungeon.find(r => r.id === roomId);
-                const rType = Game.ROOM_TYPES[targetRoom.type];
-                if (targetRoom && targetRoom.monsters.length < rType.maxMonsters) {
-                    targetRoom.monsters.push(monsterUuid);
-                } else {
-                    Game.log('sys', 'その部屋の配置上限に達しています。待機状態に戻りました。');
-                }
-            }
-            Game.renderAll();
-        };
-
-        // ドラッグ＆ドロップ配置用のイベントハンドラ
-        Game.onDragStart = function(ev, uuid) {
-            ev.dataTransfer.setData("uuid", uuid);
-            ev.dataTransfer.effectAllowed = "move";
-        };
-        Game.onDragOver = function(ev) {
-            ev.preventDefault();
-            ev.dataTransfer.dropEffect = "move";
-        };
-        Game.onDrop = function(ev, roomId) {
-            ev.preventDefault();
-            const uuid = ev.dataTransfer.getData("uuid");
-            if(uuid && roomId && !Game.state.isInvading) {
-                Game.assignMonster(uuid, roomId);
-            }
-        };
-
         // -----------------------------------------
-        // 7. 日付進行・戦闘ロジック (The Core)
+        // 7. リアルタイム侵攻システム (マリオメーカー風プレビュー)
         // -----------------------------------------
-        Game.nextDay = function() {
-            if (Game.state.isInvading) return;
-
-            // UIロック
+        Game.startInvasion = function() {
             Game.setUIInteraction(false);
+            Game.state.isInvading = true;
+            document.getElementById('invasion-status').classList.remove('hidden');
+            
+            // ログタブへ強制遷移させて状況を見せる
+            Game.switchTab('tab-log');
 
-            // 死亡モンスターの復活・回復処理
+            // 死亡モンスター回復
             Game.state.monsters.forEach(m => {
-                if (m.currentHp <= 0) {
-                    // 死亡ペナルティ：1日休んで全回復
-                    m.currentHp = m.maxHp;
-                } else {
-                    // 自然回復 (20%)
-                    m.currentHp = Math.min(m.maxHp, m.currentHp + Math.floor(m.maxHp * 0.2));
-                }
+                if (m.currentHp <= 0) m.currentHp = m.maxHp;
+                else m.currentHp = Math.min(m.maxHp, m.currentHp + Math.floor(m.maxHp * 0.2));
             });
 
-            Game.log('event', `\n==== DAY ${Game.state.day} の侵攻 ====`);
-
-            // 1. ランダムイベント判定
+            Game.log('event', `\n==== DAY ${Game.state.day} の侵攻開始 ====`);
             Game.handleRandomEvent();
 
-            // 2. 勇者生成と状態セット
+            // 勇者生成
             Game.state.activeHeroes = Game.spawnHeroes(Game.state.day);
             Game.log('sys', `${Game.state.activeHeroes.length}人の勇者パーティがダンジョンに侵入した！`);
             
-            Game.state.isInvading = true;
-            Game.state.currentRoomIndex = 0;
-            Game.renderAll();
-
-            // 3. ダンジョン進行（リアルタイム進行の開始）
-            setTimeout(() => Game.processInvasionStep(), 1500 / (Game.state.gameSpeed || 1)); // 最初は少し待つ
+            Game.state.currentRoomIndex = 0; // 入口からスタート
+            Game.renderMap();
+            
+            // 侵攻ループの開始
+            Game.invasionStep();
         };
 
-        Game.processInvasionStep = function() {
+        Game.getSpeedMs = function(baseMs) {
+            const speedMult = parseInt(document.getElementById('speed-select').value) || 1;
+            return baseMs / speedMult;
+        };
+
+        Game.invasionStep = function() {
             if (!Game.state.isInvading) return;
+            
+            const heroes = Game.state.activeHeroes;
+            const rIndex = Game.state.currentRoomIndex;
 
-            // 勇者の生存確認
-            let aliveHeroes = Game.state.activeHeroes.filter(h => h.hp > 0);
-            if (aliveHeroes.length === 0) {
-                Game.finishInvasion(false); // 全滅させた（防衛成功）
+            // 勝利判定（勇者全滅）
+            if (heroes.length === 0) {
+                Game.endInvasion(true);
                 return;
             }
 
-            // ボス部屋突破チェック
-            if (Game.state.currentRoomIndex >= Game.state.dungeon.length) {
-                Game.finishInvasion(true); // 突破された（防衛失敗）
+            // ゲームオーバー判定（ボス部屋を突破された、あるいはループ外へ出た）
+            if (rIndex >= Game.state.dungeon.length) {
+                Game.endInvasion(false);
                 return;
             }
 
-            const room = Game.state.dungeon[Game.state.currentRoomIndex];
+            const room = Game.state.dungeon[rIndex];
             const rType = Game.ROOM_TYPES[room.type];
             
             if(room.type !== 'entrance') {
                 Game.log('sys', `--- 勇者たちが [${rType.name}] に足を踏み入れた ---`);
             }
 
-            // 研究所効果
             if (room.type === 'lab') {
                 Game.state.rp += 5;
-                Game.log('sys', `研究所の機能により、研究Ptを5獲得した。`);
+                Game.log('sys', `研究所効果：研究Pt+5`);
+                document.getElementById('ui-rp').innerText = Game.state.rp;
             }
 
-            Game.renderAll(); // 部屋移動を反映
+            // この部屋の処理を順番に行うPromiseチェーン
+            Game.processRoomAsync(room, heroes)
+                .then(() => {
+                    if (Game.state.isInvading) {
+                        Game.state.currentRoomIndex++;
+                        Game.renderMap(); // 次の部屋へ移動するアニメーション的更新
+                        // 部屋間の移動ウェイト
+                        Game.combatTimer = setTimeout(() => Game.invasionStep(), Game.getSpeedMs(1000));
+                    }
+                });
+        };
 
-            // 罠フェーズ → 戦闘フェーズ を非同期で繋ぐ
-            const delay = 1000 / (Game.state.gameSpeed || 1);
-            
-            setTimeout(() => {
-                // 罠処理
+        Game.processRoomAsync = function(room, heroes) {
+            return new Promise(resolve => {
+                let delay = 0;
+                
+                // 1. 罠フェーズ
                 if (room.trap) {
-                    Game.processTrap(room, Game.state.activeHeroes);
-                    Game.renderAll(); // 罠ダメージ反映
+                    delay += Game.getSpeedMs(500);
+                    Game.combatTimer = setTimeout(() => {
+                        Game.processTrap(room, heroes);
+                        Game.state.activeHeroes = heroes.filter(h => h.hp > 0);
+                        Game.renderMap();
+                    }, delay);
                 }
 
-                setTimeout(() => {
-                    // 罠で全滅したか確認
-                    aliveHeroes = Game.state.activeHeroes.filter(h => h.hp > 0);
-                    if (aliveHeroes.length === 0) {
-                        Game.processInvasionStep(); // 次のステップを呼ぶ（全滅判定で終了する）
-                        return;
-                    }
-
-                    // モンスター戦闘フェーズ
+                // 2. 戦闘フェーズ
+                delay += Game.getSpeedMs(500);
+                Game.combatTimer = setTimeout(() => {
                     let activeMonsters = room.monsters
                         .map(uuid => Game.state.monsters.find(m => m.uuid === uuid))
                         .filter(m => m && m.currentHp > 0);
 
-                    if (activeMonsters.length > 0) {
-                        // リアルタイム戦闘開始
-                        Game.runRealtimeCombat(room, activeMonsters, Game.state.activeHeroes, () => {
-                            // 戦闘終了後の処理
-                            Game.state.currentRoomIndex++;
-                            setTimeout(() => Game.processInvasionStep(), 1000 / (Game.state.gameSpeed || 1));
-                        });
+                    if (activeMonsters.length > 0 && Game.state.activeHeroes.length > 0) {
+                        Game.runCombatLoopAsync(room, activeMonsters, Game.state.activeHeroes, resolve);
                     } else {
-                        if (room.monsters.length > 0) {
-                            Game.log('sys', '配置されたモンスターは傷ついており戦えない。素通りされた。');
-                        }
-                        // モンスターがいない場合はそのまま次の部屋へ
-                        Game.state.currentRoomIndex++;
-                        setTimeout(() => Game.processInvasionStep(), 800 / (Game.state.gameSpeed || 1));
+                        // 戦闘なしで次の部屋へ
+                        resolve();
                     }
-                }, delay); // 罠後の待機
-            }, delay); // 部屋に入ってからの待機
+                }, delay);
+            });
         };
 
-        Game.finishInvasion = function(isGameOver) {
-            Game.state.isInvading = false;
-            Game.state.currentRoomIndex = -1;
-            Game.state.activeHeroes = [];
+        Game.runCombatLoopAsync = function(room, monsters, heroes, onRoomCleared) {
+            // 部屋バフ
+            let mAtkMult = room.type === 'training' ? 1.2 : 1.0;
+            let mSpdMult = room.type === 'summon_room' ? 1.3 : 1.0;
+            let turn = 1;
 
-            if (isGameOver) {
+            const nextTurn = () => {
+                if (!Game.state.isInvading) return;
+                
+                // 終了条件
+                if (monsters.length === 0 || heroes.length === 0 || turn > 20) {
+                    if(turn > 20) Game.log('sys', '戦闘が長引いたため、勇者たちは先へ進んだ。');
+                    Game.checkDeadHeroes(heroes, room);
+                    Game.state.activeHeroes = heroes.filter(h => h.hp > 0);
+                    onRoomCleared();
+                    return;
+                }
+
+                let actors = [];
+                monsters.forEach(m => actors.push({ type: 'm', ref: m, spd: m.spd * mSpdMult + Math.random()*5 }));
+                heroes.forEach(h => actors.push({ type: 'h', ref: h, spd: h.spd + Math.random()*5 }));
+                actors.sort((a, b) => b.spd - a.spd);
+
+                // アクターごとの行動を少しずつ遅らせて実行（アニメーション用）
+                let actionDelay = 0;
+                let actionPromises = [];
+
+                for (let actor of actors) {
+                    if (actor.ref.hp <= 0 && actor.ref.currentHp <= 0) continue;
+                    
+                    actionPromises.push(new Promise(actResolve => {
+                        Game.combatTimer = setTimeout(() => {
+                            if (heroes.length === 0 || monsters.length === 0) return actResolve();
+
+                            if(Game.processStatus(actor)) return actResolve(); // 状態異常でスキップ
+
+                            if (actor.type === 'm') {
+                                let target = heroes[Math.floor(Math.random() * heroes.length)];
+                                Game.executeAttack(actor.ref, target, 'm', room);
+                                Game.animateIcon(`m-icon-${actor.ref.uuid}`, `h-icon-${target.id}`);
+                                heroes = heroes.filter(h => h.hp > 0);
+                            } else {
+                                if(actor.ref.ability === 'heal' && Math.random() < 0.3) {
+                                    let lowestHpAlly = heroes.reduce((min, h) => h.hp < min.hp ? h : min, heroes[0]);
+                                    const heal = Math.floor(actor.ref.atk * 2);
+                                    lowestHpAlly.hp = Math.min(lowestHpAlly.maxHp, lowestHpAlly.hp + heal);
+                                    Game.log('heal', `${actor.ref.name}の回復魔法！ ${lowestHpAlly.name}が${heal}回復。`);
+                                    Game.animateIcon(`h-icon-${actor.ref.id}`, `h-icon-${lowestHpAlly.id}`, 'heal');
+                                } else {
+                                    let target = monsters[Math.floor(Math.random() * monsters.length)];
+                                    Game.executeAttack(actor.ref, target, 'h', room);
+                                    Game.animateIcon(`h-icon-${actor.ref.id}`, `m-icon-${target.uuid}`);
+                                    monsters = monsters.filter(m => m.currentHp > 0);
+                                }
+                            }
+                            Game.renderMap(); // HPバー更新
+                            actResolve();
+                        }, actionDelay);
+                    }));
+                    actionDelay += Game.getSpeedMs(400); // 各行動の間にウェイト
+                }
+
+                // 全アクターの行動が終わったら次のターンへ
+                Promise.all(actionPromises).then(() => {
+                    if(room.type === 'summon_room') {
+                        monsters.forEach(m => { m.currentHp = Math.min(m.maxHp, m.currentHp + Math.floor(m.maxHp*0.05)); });
+                    }
+                    turn++;
+                    Game.combatTimer = setTimeout(nextTurn, Game.getSpeedMs(500));
+                });
+            };
+
+            nextTurn(); // ループ開始
+        };
+
+        Game.animateIcon = function(attackerId, targetId, type='attack') {
+            const aEl = document.getElementById(attackerId);
+            const tEl = document.getElementById(targetId);
+            if(aEl) {
+                aEl.classList.remove('anim-attack');
+                void aEl.offsetWidth; // trigger reflow
+                aEl.classList.add('anim-attack');
+            }
+            if(tEl && type === 'attack') {
+                tEl.classList.remove('anim-damage');
+                void tEl.offsetWidth;
+                tEl.classList.add('anim-damage');
+            }
+        };
+
+        Game.endInvasion = function(isVictory) {
+            Game.state.isInvading = false;
+            document.getElementById('invasion-status').classList.add('hidden');
+
+            if (!isVictory) {
                 Game.log('lose', '魔王は勇者たちによって討伐されてしまった...');
                 document.getElementById('overlay-title').innerText = "GAME OVER";
                 document.getElementById('overlay-desc').innerText = `DAY ${Game.state.day} にて防衛失敗。ダンジョンは陥落した。`;
                 document.getElementById('game-overlay').classList.remove('hidden');
-                return; // 進行停止
             } else {
                 Game.log('win', '勇者たちの撃退に成功した！');
                 
-                // 生存モンスターに経験値付与
+                // 経験値付与
                 let totalExp = Game.state.day * 5;
                 Game.state.monsters.forEach(m => {
                     if(m.currentHp > 0) {
                         m.exp += totalExp;
-                        // レベルアップ判定
                         if(m.exp >= m.level * 20) {
                             m.exp -= m.level * 20;
                             m.level++;
-                            const statUp = Math.floor(m.maxHp * 0.1);
-                            m.maxHp += statUp; m.currentHp = m.maxHp;
+                            m.maxHp += Math.floor(m.maxHp * 0.1); m.currentHp = m.maxHp;
                             m.atk += Math.floor(m.atk * 0.1) + 1;
                             m.def += Math.floor(m.def * 0.1) + 1;
                             m.spd += Math.floor(m.spd * 0.1);
@@ -1210,46 +1226,147 @@
                     }
                 });
 
-                // クリア判定
                 if (Game.state.day >= 100) {
-                    Game.log('win', '【祝】100日間ダンジョンを防衛しきった！魔王軍の完全勝利だ！');
+                    Game.log('win', '【祝】100日間防衛成功！魔王軍の勝利！');
                     document.getElementById('overlay-title').innerText = "GAME CLEAR!";
                     document.getElementById('overlay-title').classList.replace('text-red-500', 'text-yellow-400');
-                    document.getElementById('overlay-desc').innerText = "人類の希望は潰えた。世界はあなたの物です。";
                     document.getElementById('game-overlay').classList.remove('hidden');
                     return;
                 }
 
                 Game.state.day++;
+                Game.state.currentRoomIndex = -1;
                 Game.renderAll();
-                Game.saveGame(); // 自動セーブ
-                Game.setUIInteraction(true); // UIロック解除
+                Game.showSaveDialog(true); // 1日終了時のセーブダイアログ表示
             }
+        };
+
+        // --- 以下戦闘計算ロジック（従来通り） ---
+        Game.processTrap = function(room, heroes) {
+            const trap = Game.TRAP_DATA[room.trap.type];
+            let powerMult = room.type === 'trap_room' ? 1.5 : 1.0;
+            Game.log('sys', `>>> 罠【${trap.name} Lv${room.trap.level}】発動！`);
+
+            if (trap.type === 'damage') {
+                const target = heroes[Math.floor(Math.random() * heroes.length)];
+                const dmg = Math.floor(trap.power * room.trap.level * powerMult);
+                target.hp -= dmg;
+                Game.log('dmg', `${target.name} に ${dmg} のダメージ！`);
+                Game.animateIcon(null, `h-icon-${target.id}`);
+            } else if (trap.type === 'damage_all') {
+                const dmg = Math.floor(trap.power * room.trap.level * powerMult);
+                heroes.forEach(h => {
+                    h.hp -= dmg;
+                    Game.log('dmg', `${h.name} に ${dmg} のダメージ！`);
+                    Game.animateIcon(null, `h-icon-${h.id}`);
+                    if(trap.effect && Math.random() < trap.chance) {
+                        h.status[trap.effect] = 2;
+                        Game.log('status', `${h.name} は ${trap.effect} 状態になった！`);
+                    }
+                });
+            } else if (trap.type === 'status') {
+                heroes.forEach(h => {
+                    if (Math.random() < (trap.chance + (room.trap.level * 0.1))) {
+                        h.status[trap.effect] = 2 + Math.floor(room.trap.level/2);
+                        Game.log('status', `${h.name} は ${trap.effect} 状態になった！`);
+                    }
+                });
+            }
+        };
+
+        Game.processStatus = function(actor) {
+            let st = actor.ref.status || {};
+            let isM = actor.type === 'm';
+            let name = isM ? Game.MONSTER_DATA[actor.ref.type].name : actor.ref.name;
+            let idForAnim = isM ? `m-icon-${actor.ref.uuid}` : `h-icon-${actor.ref.id}`;
+            
+            if (st.poison && st.poison > 0) {
+                let dmg = Math.floor((isM ? actor.ref.maxHp : actor.ref.maxHp) * 0.1);
+                if(isM) actor.ref.currentHp -= dmg; else actor.ref.hp -= dmg;
+                Game.log('status', `${name} は毒のダメージ！(-${dmg})`);
+                Game.animateIcon(null, idForAnim);
+                st.poison--;
+            }
+            if (st.burn && st.burn > 0) {
+                let dmg = 10;
+                if(isM) actor.ref.currentHp -= dmg; else actor.ref.hp -= dmg;
+                Game.log('status', `${name} は火傷ダメージ！(-${dmg})`);
+                Game.animateIcon(null, idForAnim);
+                st.burn--;
+            }
+            if (st.paralyze && st.paralyze > 0) {
+                st.paralyze--;
+                if(Math.random() < 0.5) {
+                    Game.log('status', `${name} は麻痺で動けない！`);
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        Game.executeAttack = function(attacker, defender, attackerType, room) {
+            let aName, dName, aAtk, dDef;
+            let isCrit = Math.random() < 0.1;
+            let isDodge = Math.random() < 0.05;
+            
+            let mAtkMult = room.type === 'training' ? 1.2 : 1.0;
+            let mDefMult = room.type === 'training' ? 1.2 : 1.0;
+            if(room.type === 'dragon_nest' && Game.MONSTER_DATA[attacker.type]?.id === 'dragon') mAtkMult = 1.5;
+            if(room.type === 'dragon_nest' && Game.MONSTER_DATA[defender.type]?.id === 'dragon') mDefMult = 1.5;
+
+            if (attackerType === 'm') {
+                aName = Game.MONSTER_DATA[attacker.type].name; dName = defender.name;
+                aAtk = attacker.atk * mAtkMult; dDef = defender.def;
+                if(defender.ability === 'evade') isDodge = Math.random() < 0.2;
+            } else {
+                aName = attacker.name; dName = Game.MONSTER_DATA[defender.type].name;
+                aAtk = attacker.atk; dDef = defender.def * mDefMult;
+            }
+
+            if (isDodge) {
+                Game.log('sys', `${aName} の攻撃... ${dName} は身をかわした！`);
+                return;
+            }
+
+            let dmg = Math.floor(aAtk - (dDef * 0.5));
+            if (isCrit) { dmg = Math.floor(dmg * 1.5); Game.log('crit', `【痛恨の一撃!!】`); }
+            dmg = Math.max(1, dmg);
+
+            if (attackerType === 'm') {
+                defender.hp -= dmg;
+                Game.log('monster', `${aName} の攻撃！ ${dName} に ${dmg} ダメージ！`);
+            } else {
+                defender.currentHp -= dmg;
+                Game.log('hero', `${aName} の攻撃！ ${dName} に ${dmg} ダメージ！`);
+            }
+        };
+
+        Game.checkDeadHeroes = function(heroesArray, room) {
+            let deadHeroes = heroesArray.filter(h => h.hp <= 0);
+            deadHeroes.forEach(h => {
+                let goldGain = h.goldDrop;
+                if(room.type === 'treasury') goldGain = Math.floor(goldGain * 1.5);
+                Game.state.gold += goldGain;
+                Game.log('win', `${h.name} を討ち取った！ (+${goldGain}G)`);
+                document.getElementById('ui-gold').innerText = Game.state.gold;
+            });
         };
 
         Game.spawnHeroes = function(day) {
             let heroes = [];
-            
-            // ボス判定
             if (Game.BOSS_SCHEDULE[day]) {
-                const bossData = Game.BOSS_SCHEDULE[day];
-                Game.log('event', `【警告】${bossData.name} が接近しています！`);
-                
-                for(let i=0; i<bossData.count; i++) {
+                const bd = Game.BOSS_SCHEDULE[day];
+                Game.log('event', `【警告】${bd.name} が接近しています！`);
+                for(let i=0; i<bd.count; i++) {
                     let cls = 'warrior';
-                    if (bossData.special && bossData.special[i]) cls = bossData.special[i];
-                    else if (bossData.class) cls = bossData.class;
-                    else {
-                        const keys = Object.keys(Game.HERO_CLASSES);
-                        cls = keys[Math.floor(Math.random() * keys.length)];
-                    }
-                    heroes.push(Game.createHero(bossData.rank, cls, day, true));
+                    if (bd.special && bd.special[i]) cls = bd.special[i];
+                    else if (bd.class) cls = bd.class;
+                    else { const keys = Object.keys(Game.HERO_CLASSES); cls = keys[Math.floor(Math.random() * keys.length)]; }
+                    heroes.push(Game.createHero(bd.rank, cls, day, true));
                 }
                 return heroes;
             }
 
-            // 通常湧き
-            // 日数に応じてランク決定
             let rank = 'F';
             if(day > 10) rank = Math.random() > 0.5 ? 'E' : 'F';
             if(day > 25) rank = Math.random() > 0.5 ? 'D' : 'E';
@@ -1257,7 +1374,6 @@
             if(day > 65) rank = Math.random() > 0.5 ? 'B' : 'C';
             if(day > 85) rank = Math.random() > 0.6 ? 'A' : 'B';
 
-            // 人数
             let count = 1 + Math.floor(day / 20) + Math.floor(Math.random() * 2);
             if(count > 5) count = 5;
 
@@ -1270,261 +1386,33 @@
         };
 
         Game.createHero = function(rankStr, classStr, day, isBoss) {
-            const rankData = Game.HERO_RANKS[rankStr];
-            const clsData = Game.HERO_CLASSES[classStr];
-            
-            // 日数スケールとランク乗算
-            const dayScale = 1 + (day * 0.05); 
-            const bossScale = isBoss ? 1.5 : 1.0;
-            const totalMult = rankData.mult * dayScale * bossScale;
+            const rData = Game.HERO_RANKS[rankStr];
+            const cData = Game.HERO_CLASSES[classStr];
+            const totalMult = rData.mult * (1 + (day * 0.05)) * (isBoss ? 1.5 : 1.0);
 
             return {
-                id: Game.generateUUID(),
-                name: `${rankStr}級${clsData.name}`,
-                rank: rankStr,
-                class: classStr,
-                hp: Math.floor(20 * clsData.hpMult * totalMult),
-                maxHp: Math.floor(20 * clsData.hpMult * totalMult),
-                atk: Math.floor(5 * clsData.atkMult * totalMult),
-                def: Math.floor(2 * clsData.defMult * totalMult),
-                spd: Math.floor(10 * clsData.spdMult * totalMult),
-                goldDrop: rankData.gold,
-                status: {},
-                ability: clsData.ability || 'none',
-                looted: false // ドロップ金回収済みフラグ
+                id: Game.generateUUID(), name: `${rankStr}級${cData.name}`,
+                rank: rankStr, class: classStr,
+                hp: Math.floor(20 * cData.hpMult * totalMult), maxHp: Math.floor(20 * cData.hpMult * totalMult),
+                atk: Math.floor(5 * cData.atkMult * totalMult), def: Math.floor(2 * cData.defMult * totalMult),
+                spd: Math.floor(10 * cData.spdMult * totalMult), goldDrop: rData.gold, status: {}, ability: cData.ability || 'none'
             };
         };
 
         Game.handleRandomEvent = function() {
-            if (Math.random() < 0.2) { // 20%の確率でイベント発生
+            if (Math.random() < 0.2) {
                 const events = [
-                    { name: '宝箱発見', exec: () => { const g = Game.state.day * 10; Game.state.gold += g; Game.log('event', `ダンジョンの隅で埋蔵金を発見！ ${g}G獲得！`); } },
-                    { name: '魔界商人', exec: () => { Game.state.rp += 20; Game.log('event', `魔界の商人が訪れ、未知の知識を置いていった。RP+20`); } },
-                    { name: 'モンスター暴走', exec: () => { 
-                        Game.state.monsters.forEach(m => m.atk += 2); 
-                        Game.log('event', `ダンジョン内に魔力が満ち、全モンスターの攻撃力が少し上がった！`); 
-                    } }
+                    { name: '宝箱', exec: () => { const g = Game.state.day * 10; Game.state.gold += g; Game.log('event', `埋蔵金を発見！ ${g}G獲得！`); } },
+                    { name: '商人', exec: () => { Game.state.rp += 20; Game.log('event', `魔界商人から知識を得た。RP+20`); } },
+                    { name: '暴走', exec: () => { Game.state.monsters.forEach(m => m.atk += 2); Game.log('event', `全モンスターの攻撃力が少し上がった！`); } }
                 ];
-                const ev = events[Math.floor(Math.random() * events.length)];
-                ev.exec();
+                events[Math.floor(Math.random() * events.length)].exec();
+                document.getElementById('ui-gold').innerText = Game.state.gold;
+                document.getElementById('ui-rp').innerText = Game.state.rp;
             }
         };
 
-        // -----------------------------------------
-        // 8. 戦闘エンジン
-        // -----------------------------------------
-        Game.processTrap = function(room, heroes) {
-            const trap = Game.TRAP_DATA[room.trap.type];
-            const tLevel = room.trap.level;
-            
-            let powerMult = 1.0;
-            if (room.type === 'trap_room') powerMult = 1.5;
-
-            Game.log('sys', `>>> 罠【${trap.name} Lv${tLevel}】発動！`);
-
-            let aliveHeroes = heroes.filter(h => h.hp > 0);
-            if(aliveHeroes.length === 0) return;
-
-            if (trap.type === 'damage') {
-                const target = aliveHeroes[Math.floor(Math.random() * aliveHeroes.length)];
-                const dmg = Math.floor(trap.power * tLevel * powerMult);
-                target.hp -= dmg;
-                Game.log('dmg', `${target.name} に ${dmg} のダメージ！`);
-            } 
-            else if (trap.type === 'damage_all') {
-                const dmg = Math.floor(trap.power * tLevel * powerMult);
-                aliveHeroes.forEach(h => {
-                    h.hp -= dmg;
-                    Game.log('dmg', `${h.name} に ${dmg} のダメージ！`);
-                    if(trap.effect && Math.random() < trap.chance) {
-                        h.status[trap.effect] = 2; // 2ターン
-                        Game.log('status', `${h.name} は ${trap.effect} 状態になった！`);
-                    }
-                });
-            }
-            else if (trap.type === 'status') {
-                aliveHeroes.forEach(h => {
-                    if (Math.random() < (trap.chance + (tLevel * 0.1))) {
-                        h.status[trap.effect] = 2 + Math.floor(tLevel/2);
-                        Game.log('status', `${h.name} は ${trap.effect} 状態になった！`);
-                    }
-                });
-            }
-            Game.checkDeadHeroes(heroes, room);
-        };
-
-        Game.runRealtimeCombat = function(room, monsters, heroes, onFinish) {
-            // 部屋のバフ計算
-            let mAtkMult = 1.0, mDefMult = 1.0, mSpdMult = 1.0;
-            if(room.type === 'training') { mAtkMult = 1.2; mDefMult = 1.2; }
-            if(room.type === 'summon_room') { mSpdMult = 1.3; }
-
-            let turn = 1;
-
-            // ターン毎の処理を再帰的setTimeoutで実行（速度変更に対応するため）
-            const combatLoop = () => {
-                if(!Game.state.isInvading) return; // 念のため
-
-                // 現在生きている者だけ抽出
-                let aliveMonsters = monsters.filter(m => m.currentHp > 0);
-                let aliveHeroes = heroes.filter(h => h.hp > 0);
-
-                // 終了判定
-                if (aliveMonsters.length === 0 || aliveHeroes.length === 0 || turn > 20) {
-                    if(turn > 20) Game.log('sys', '戦闘が長引いたため、勇者たちは撤退した（引き分け）');
-                    
-                    // 召喚部屋のターン終了時回復
-                    if(room.type === 'summon_room') {
-                        monsters.forEach(m => {
-                            if(m.currentHp > 0) m.currentHp = Math.min(m.maxHp, m.currentHp + Math.floor(m.maxHp*0.05));
-                        });
-                    }
-                    
-                    Game.checkDeadHeroes(heroes, room);
-                    Game.renderAll(); // 最終状態の描画
-                    
-                    setTimeout(onFinish, 1000 / (Game.state.gameSpeed || 1)); // 結果を確認する時間を与えてから次へ
-                    return;
-                }
-
-                // 素早さ順でソートして行動リスト作成
-                let actors = [];
-                aliveMonsters.forEach(m => actors.push({ type: 'm', ref: m, spd: m.spd * mSpdMult + Math.random()*5 }));
-                aliveHeroes.forEach(h => actors.push({ type: 'h', ref: h, spd: h.spd + Math.random()*5 }));
-                actors.sort((a, b) => b.spd - a.spd);
-
-                for (let actor of actors) {
-                    if (actor.ref.hp <= 0 && actor.ref.currentHp <= 0) continue; // 行動前に死んでいればスキップ
-                    
-                    let currentAliveHeroes = heroes.filter(h => h.hp > 0);
-                    let currentAliveMonsters = monsters.filter(m => m.currentHp > 0);
-                    if (currentAliveHeroes.length === 0 || currentAliveMonsters.length === 0) break; // 途中で全滅
-
-                    // 状態異常処理
-                    if(Game.processStatus(actor)) continue; 
-
-                    if (actor.type === 'm') {
-                        let target = currentAliveHeroes[Math.floor(Math.random() * currentAliveHeroes.length)];
-                        Game.executeAttack(actor.ref, target, 'm', room);
-                    } else {
-                        // 僧侶の回復行動
-                        if(actor.ref.ability === 'heal' && Math.random() < 0.3) {
-                            let lowestHpAlly = currentAliveHeroes.reduce((min, h) => h.hp < min.hp ? h : min, currentAliveHeroes[0]);
-                            const heal = Math.floor(actor.ref.atk * 2);
-                            lowestHpAlly.hp = Math.min(lowestHpAlly.maxHp, lowestHpAlly.hp + heal);
-                            Game.log('heal', `${actor.ref.name} は回復魔法を唱えた！ ${lowestHpAlly.name}のHPが${heal}回復。`);
-                            continue;
-                        }
-
-                        let target = currentAliveMonsters[Math.floor(Math.random() * currentAliveMonsters.length)];
-                        Game.executeAttack(actor.ref, target, 'h', room);
-                    }
-                }
-                
-                Game.checkDeadHeroes(heroes, room); // ターン毎の死亡判定
-                Game.renderAll(); // 毎ターンの結果を画面に反映
-                turn++;
-                
-                setTimeout(combatLoop, 600 / (Game.state.gameSpeed || 1)); // 次のターンへ
-            };
-
-            // 戦闘ループ開始
-            setTimeout(combatLoop, 600 / (Game.state.gameSpeed || 1));
-        };
-
-        Game.processStatus = function(actor) {
-            let st = actor.ref.status || {};
-            let isM = actor.type === 'm';
-            let name = isM ? Game.MONSTER_DATA[actor.ref.type].name : actor.ref.name;
-            
-            if (st.poison && st.poison > 0) {
-                let dmg = Math.floor((isM ? actor.ref.maxHp : actor.ref.maxHp) * 0.1); // 最大HPの10%
-                if(isM) actor.ref.currentHp -= dmg; else actor.ref.hp -= dmg;
-                Game.log('status', `${name} は毒のダメージを受けた！(-${dmg})`);
-                st.poison--;
-            }
-            if (st.burn && st.burn > 0) {
-                let dmg = 10;
-                if(isM) actor.ref.currentHp -= dmg; else actor.ref.hp -= dmg;
-                Game.log('status', `${name} は火傷でダメージを受けた！(-${dmg})`);
-                st.burn--;
-            }
-            if (st.paralyze && st.paralyze > 0) {
-                st.paralyze--;
-                if(Math.random() < 0.5) {
-                    Game.log('status', `${name} は体が痺れて動けない！`);
-                    return true; // 行動スキップ
-                }
-            }
-            return false;
-        };
-
-        Game.executeAttack = function(attacker, defender, attackerType, room) {
-            let aName, dName, aAtk, dDef;
-            let isCrit = Math.random() < 0.1; // 10%クリティカル
-            let isDodge = Math.random() < 0.05; // 5%基本回避
-            
-            // 部屋バフ等の適用
-            let mAtkMult = room.type === 'training' ? 1.2 : 1.0;
-            let mDefMult = room.type === 'training' ? 1.2 : 1.0;
-            if(room.type === 'dragon_nest' && Game.MONSTER_DATA[attacker.type]?.id === 'dragon') mAtkMult = 1.5;
-            if(room.type === 'dragon_nest' && Game.MONSTER_DATA[defender.type]?.id === 'dragon') mDefMult = 1.5;
-
-            if (attackerType === 'm') {
-                aName = Game.MONSTER_DATA[attacker.type].name;
-                dName = defender.name;
-                aAtk = attacker.atk * mAtkMult;
-                dDef = defender.def;
-                if(defender.ability === 'evade') isDodge = Math.random() < 0.2; // 盗賊は回避高め
-            } else {
-                aName = attacker.name;
-                dName = Game.MONSTER_DATA[defender.type].name;
-                aAtk = attacker.atk;
-                dDef = defender.def * mDefMult;
-            }
-
-            if (isDodge) {
-                Game.log('sys', `${aName} の攻撃！...しかし ${dName} は素早く身をかわした！`);
-                return;
-            }
-
-            let dmg = Math.floor(aAtk - (dDef * 0.5));
-            if (isCrit) {
-                dmg = Math.floor(dmg * 1.5);
-                Game.log('crit', `【痛恨の一撃!!】`);
-            }
-            dmg = Math.max(1, dmg); // 最低1ダメージ
-
-            if (attackerType === 'm') {
-                defender.hp -= dmg;
-                Game.log('monster', `${aName} の攻撃！ ${dName} に ${dmg} ダメージ！`);
-            } else {
-                defender.currentHp -= dmg;
-                Game.log('hero', `${aName} の攻撃！ ${dName} に ${dmg} ダメージ！`);
-            }
-        };
-
-        Game.checkDeadHeroes = function(heroesArray, room) {
-            // HP0以下で、まだお金を落としていない勇者を処理
-            let deadHeroes = heroesArray.filter(h => h.hp <= 0 && !h.looted);
-            
-            deadHeroes.forEach(h => {
-                let goldGain = h.goldDrop;
-                if(room.type === 'treasury') goldGain = Math.floor(goldGain * 1.5);
-                
-                Game.state.gold += goldGain;
-                h.looted = true; // 回収済みフラグを立てる
-                Game.log('win', `${h.name} を討ち取った！ (+${goldGain}G)`);
-            });
-        };
-
-        // -----------------------------------------
-        // 9. アプリケーション起動
-        // -----------------------------------------
-        window.addEventListener('DOMContentLoaded', () => {
-            Game.init();
-        });
-
+        window.addEventListener('DOMContentLoaded', Game.init);
     </script>
 </body>
 </html>
