@@ -1095,7 +1095,8 @@
                     delay += Game.getSpeedMs(500);
                     Game.combatTimer = setTimeout(() => {
                         Game.processTrap(room, heroes);
-                        Game.state.activeHeroes = heroes.filter(h => h.hp > 0);
+                        heroes = Game.removeDeadHeroes(heroes, room);
+                        Game.state.activeHeroes = heroes;
                         Game.renderMap();
                     }, delay);
                 }
@@ -1129,8 +1130,8 @@
                 // 終了条件
                 if (monsters.length === 0 || heroes.length === 0 || turn > 20) {
                     if(turn > 20) Game.log('sys', '戦闘が長引いたため、勇者たちは先へ進んだ。');
-                    Game.checkDeadHeroes(heroes, room);
-                    Game.state.activeHeroes = heroes.filter(h => h.hp > 0);
+                    heroes = Game.removeDeadHeroes(heroes, room);
+                    Game.state.activeHeroes = heroes;
                     onRoomCleared();
                     return;
                 }
@@ -1151,13 +1152,24 @@
                         Game.combatTimer = setTimeout(() => {
                             if (heroes.length === 0 || monsters.length === 0) return actResolve();
 
-                            if(Game.processStatus(actor)) return actResolve(); // 状態異常でスキップ
+                            let isSkip = Game.processStatus(actor);
+                            
+                            // 状態異常ダメージで死んだ場合の反映
+                            heroes = Game.removeDeadHeroes(heroes, room);
+                            monsters = monsters.filter(m => m.currentHp > 0);
+
+                            if(isSkip || (actor.type === 'm' && actor.ref.currentHp <= 0) || (actor.type === 'h' && actor.ref.hp <= 0)) {
+                                Game.renderMap();
+                                return actResolve();
+                            }
+
+                            if (heroes.length === 0 || monsters.length === 0) return actResolve();
 
                             if (actor.type === 'm') {
                                 let target = heroes[Math.floor(Math.random() * heroes.length)];
                                 Game.executeAttack(actor.ref, target, 'm', room);
                                 Game.animateIcon(`m-icon-${actor.ref.uuid}`, `h-icon-${target.id}`);
-                                heroes = heroes.filter(h => h.hp > 0);
+                                heroes = Game.removeDeadHeroes(heroes, room);
                             } else {
                                 if(actor.ref.ability === 'heal' && Math.random() < 0.3) {
                                     let lowestHpAlly = heroes.reduce((min, h) => h.hp < min.hp ? h : min, heroes[0]);
@@ -1351,16 +1363,17 @@
             }
         };
 
-        Game.checkDeadHeroes = function(heroesArray, room) {
+        Game.removeDeadHeroes = function(heroesArray, room) {
             let deadHeroes = heroesArray.filter(h => h.hp <= 0);
             deadHeroes.forEach(h => {
                 let goldGain = h.goldDrop;
-                if(room.type === 'treasury') goldGain = Math.floor(goldGain * 1.5);
+                if(room && room.type === 'treasury') goldGain = Math.floor(goldGain * 1.5);
                 goldGain = Math.floor(goldGain * (0.9 + Math.random() * 0.2)); // ±10%のゆらぎ
                 Game.state.gold += goldGain;
                 Game.log('win', `${h.name}(ランク${h.rank}) を討ち取った！ (+${goldGain}G)`);
                 document.getElementById('ui-gold').innerText = Game.state.gold;
             });
+            return heroesArray.filter(h => h.hp > 0);
         };
 
         Game.spawnHeroes = function(day) {
