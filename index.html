@@ -338,9 +338,14 @@
         };
 
         Game.HERO_RANKS = {
-            'F': { mult: 1.0, gold: 10 }, 'E': { mult: 1.5, gold: 15 }, 'D': { mult: 2.2, gold: 25 },
-            'C': { mult: 3.5, gold: 40 }, 'B': { mult: 5.5, gold: 80 }, 'A': { mult: 8.5, gold: 150 },
-            'S': { mult: 15.0, gold: 400 }, 'SS': { mult: 25.0, gold: 1000 }
+            'F': { mult: 1.0, gold: 10, rp: 1 }, 
+            'E': { mult: 1.5, gold: 15, rp: 3 }, 
+            'D': { mult: 2.2, gold: 25, rp: 5 },
+            'C': { mult: 3.5, gold: 40, rp: 10 }, 
+            'B': { mult: 5.5, gold: 80, rp: 20 }, 
+            'A': { mult: 8.5, gold: 150, rp: 40 },
+            'S': { mult: 15.0, gold: 400, rp: 80 }, 
+            'SS': { mult: 25.0, gold: 1000, rp: 200 }
         };
 
         Game.HERO_CLASSES = {
@@ -1028,10 +1033,11 @@
             // ログタブへ強制遷移させて状況を見せる
             Game.switchTab('tab-log');
 
-            // 死亡モンスター回復
+            // 生存モンスターの回復（死亡モンスターは完全に削除されるため復活しない）
             Game.state.monsters.forEach(m => {
-                if (m.currentHp <= 0) m.currentHp = m.maxHp;
-                else m.currentHp = Math.min(m.maxHp, m.currentHp + Math.floor(m.maxHp * 0.2));
+                if (m.currentHp > 0) {
+                    m.currentHp = Math.min(m.maxHp, m.currentHp + Math.floor(m.maxHp * 0.2));
+                }
             });
 
             Game.log('event', `\n==== DAY ${Game.state.day} の侵攻開始 ====`);
@@ -1112,6 +1118,7 @@
                     Game.combatTimer = setTimeout(() => {
                         Game.processTrap(room, heroes);
                         heroes = Game.removeDeadHeroes(heroes, room);
+                        Game.removeDeadMonsters(room);
                         Game.state.activeHeroes = heroes;
                         Game.renderMap();
                     }, delay);
@@ -1147,6 +1154,7 @@
                 if (monsters.length === 0 || heroes.length === 0 || turn > 20) {
                     if(turn > 20) Game.log('sys', '戦闘が長引いたため、勇者たちは先へ進んだ。');
                     heroes = Game.removeDeadHeroes(heroes, room);
+                    Game.removeDeadMonsters(room);
                     Game.state.activeHeroes = heroes;
                     onRoomCleared();
                     return;
@@ -1172,6 +1180,7 @@
                             
                             // 状態異常ダメージで死んだ場合の反映
                             heroes = Game.removeDeadHeroes(heroes, room);
+                            Game.removeDeadMonsters(room);
                             monsters = monsters.filter(m => m.currentHp > 0);
 
                             if(isSkip || (actor.type === 'm' && actor.ref.currentHp <= 0) || (actor.type === 'h' && actor.ref.hp <= 0)) {
@@ -1197,6 +1206,7 @@
                                     let target = monsters[Math.floor(Math.random() * monsters.length)];
                                     Game.executeAttack(actor.ref, target, 'h', room);
                                     Game.animateIcon(`h-icon-${actor.ref.id}`, `m-icon-${target.uuid}`);
+                                    Game.removeDeadMonsters(room);
                                     monsters = monsters.filter(m => m.currentHp > 0);
                                 }
                             }
@@ -1386,10 +1396,34 @@
                 if(room && room.type === 'treasury') goldGain = Math.floor(goldGain * 1.5);
                 goldGain = Math.floor(goldGain * (0.9 + Math.random() * 0.2)); // ±10%のゆらぎ
                 Game.state.gold += goldGain;
-                Game.log('win', `${h.name}(ランク${h.rank}) を討ち取った！ (+${goldGain}G)`);
+                
+                let rpGain = Game.HERO_RANKS[h.rank].rp || 0;
+                Game.state.rp += rpGain;
+                
+                Game.log('win', `${h.name}(ランク${h.rank}) を討ち取った！ (+${goldGain}G, +${rpGain}Pt)`);
                 document.getElementById('ui-gold').innerText = Game.state.gold;
+                document.getElementById('ui-rp').innerText = Game.state.rp;
             });
             return heroesArray.filter(h => h.hp > 0);
+        };
+
+        Game.removeDeadMonsters = function(room) {
+            if (!room || !room.monsters) return;
+            let deadUuids = [];
+            room.monsters.forEach(uuid => {
+                const m = Game.state.monsters.find(x => x.uuid === uuid);
+                if (m && m.currentHp <= 0) {
+                    deadUuids.push(uuid);
+                    Game.log('lose', `💀 ${Game.MONSTER_DATA[m.type].name}(Lv${m.level}) は討伐され、完全に消滅した...`);
+                }
+            });
+
+            if (deadUuids.length > 0) {
+                // 部屋の配置から削除
+                room.monsters = room.monsters.filter(uuid => !deadUuids.includes(uuid));
+                // 所属モンスター全体から削除（ロスト）
+                Game.state.monsters = Game.state.monsters.filter(m => !deadUuids.includes(m.uuid));
+            }
         };
 
         Game.spawnHeroes = function(day) {
