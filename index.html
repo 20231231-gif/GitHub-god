@@ -499,6 +499,10 @@
 
         Game.closeSaveDialog = function() {
             document.getElementById('save-dialog').classList.add('hidden');
+            // セーブ画面を閉じたら、侵攻中でなければボタンを押せるように復元する
+            if (!Game.state.isInvading) {
+                Game.setUIInteraction(true);
+            }
         };
 
         Game.loadGame = function() {
@@ -1015,6 +1019,12 @@
             });
 
             Game.log('event', `\n==== DAY ${Game.state.day} の侵攻開始 ====`);
+            
+            // 10日ごとに敵が強くなるタイミングの通知
+            if (Game.state.day % 10 === 1 && Game.state.day > 1) {
+                Game.log('event', `【警告】勇者たちの脅威レベルが上昇した！基礎ステータスが大幅に強化されている！`);
+            }
+
             Game.handleRandomEvent();
 
             // 勇者生成
@@ -1346,8 +1356,9 @@
             deadHeroes.forEach(h => {
                 let goldGain = h.goldDrop;
                 if(room.type === 'treasury') goldGain = Math.floor(goldGain * 1.5);
+                goldGain = Math.floor(goldGain * (0.9 + Math.random() * 0.2)); // ±10%のゆらぎ
                 Game.state.gold += goldGain;
-                Game.log('win', `${h.name} を討ち取った！ (+${goldGain}G)`);
+                Game.log('win', `${h.name}(ランク${h.rank}) を討ち取った！ (+${goldGain}G)`);
                 document.getElementById('ui-gold').innerText = Game.state.gold;
             });
         };
@@ -1388,14 +1399,21 @@
         Game.createHero = function(rankStr, classStr, day, isBoss) {
             const rData = Game.HERO_RANKS[rankStr];
             const cData = Game.HERO_CLASSES[classStr];
-            const totalMult = rData.mult * (1 + (day * 0.05)) * (isBoss ? 1.5 : 1.0);
+            
+            // 10日ごとに敵の脅威レベル（フェーズ）が一段階上がる
+            const phase = Math.floor((day - 1) / 10);
+            const phaseMult = 1.0 + (phase * 0.5); // 1フェーズごとにステータス50%アップ
+            
+            const totalMult = rData.mult * phaseMult * (isBoss ? 1.5 : 1.0);
 
             return {
                 id: Game.generateUUID(), name: `${rankStr}級${cData.name}`,
                 rank: rankStr, class: classStr,
                 hp: Math.floor(20 * cData.hpMult * totalMult), maxHp: Math.floor(20 * cData.hpMult * totalMult),
                 atk: Math.floor(5 * cData.atkMult * totalMult), def: Math.floor(2 * cData.defMult * totalMult),
-                spd: Math.floor(10 * cData.spdMult * totalMult), goldDrop: rData.gold, status: {}, ability: cData.ability || 'none'
+                spd: Math.floor(10 * cData.spdMult * totalMult), 
+                goldDrop: Math.floor(rData.gold * (1 + phase * 0.2)), // ゴールドもフェーズ経過で少し増やす
+                status: {}, ability: cData.ability || 'none'
             };
         };
 
